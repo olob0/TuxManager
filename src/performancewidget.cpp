@@ -522,16 +522,8 @@ void PerformanceWidget::onSidePanelContextMenu(Perf::SidePanelItem * /*item*/, c
         if (dialog.exec() != QDialog::Accepted)
             return;
 
-        CFG->UseCustomColorScheme = dialog.UseCustomScheme();
-        const ColorScheme scheme = dialog.BuildScheme();
-        CFG->CustomColorScheme = scheme.ToVariantMap();
-
-        if (CFG->UseCustomColorScheme)
-            ColorScheme::Install(new ColorScheme(scheme));
-        else
-            ColorScheme::Install(new ColorScheme(ColorScheme::DetectDarkMode()
-                                                 ? ColorScheme::DefaultDark()
-                                                 : ColorScheme::DefaultLight()));
+        CFG->Colors = dialog.GetSettings();
+        ColorScheme::Install(new ColorScheme(ColorScheme::Resolve(CFG->Colors, ColorScheme::DetectDarkMode())));
 
         this->ApplyColorScheme();
         CFG->Save();

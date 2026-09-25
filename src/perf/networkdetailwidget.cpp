@@ -84,7 +84,7 @@ void NetworkDetailWidget::applyStyle()
     const ColorScheme *scheme = ColorScheme::GetCurrent();
     this->applyPageStyle(scheme->NetworkTitleColor);
     this->ui->throughputCard->SetTwoLineSeries(this->ui->throughputGraphWidget, tr("Receive"), tr("Send"),
-                                               scheme->NetworkGraphLineColor);
+                                               scheme->NetworkGraphLineColor, scheme->NetworkGraphSecondaryLineColor);
 }
 
 void NetworkDetailWidget::applyTransferUnitMode()

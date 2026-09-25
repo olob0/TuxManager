@@ -19,6 +19,8 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
+#include "colorscheme.h"
+
 #include <QByteArray>
 #include <QObject>
 #include <QStringList>
@@ -50,8 +52,8 @@ class Configuration : public QObject
         // ── General ──────────────────────────────────────────────────────────────
         int RefreshRateMs { 1000 };  ///< How often live data is refreshed (ms)
         bool RefreshPaused { false }; ///< True when periodic refresh is paused.
-        bool UseCustomColorScheme { false };
-        QVariantMap CustomColorScheme;
+        //! Palette, category assignments and single-color overrides; the scheme is derived from them.
+        ColorScheme::Settings Colors { ColorScheme::Settings::Defaults() };
         bool IsSuperuser { false };  ///< True when effective UID is 0 (runtime-only).
         uid_t EUID { 0 };            ///< Effective user ID captured at startup (runtime-only).
         bool IOMetricsEnabled { false }; ///< True when any Processes I/O column is visible (runtime-only).

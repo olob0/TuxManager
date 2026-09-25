@@ -98,7 +98,7 @@ void DiskDetailWidget::applyStyle()
     const ColorScheme *scheme = ColorScheme::GetCurrent();
     this->applyPageStyle(scheme->DiskTitleColor);
     this->ui->transferCard->SetTwoLineSeries(this->ui->transferGraphWidget, tr("Read"), tr("Write"),
-                                             scheme->DiskTransferGraphLineColor);
+                                             scheme->DiskTransferGraphLineColor, scheme->DiskTransferGraphSecondaryLineColor);
 }
 
 void DiskDetailWidget::SetDisk(int index)

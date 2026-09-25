@@ -105,7 +105,7 @@ void SwapDetailWidget::applyStyle()
     const ColorScheme *scheme = ColorScheme::GetCurrent();
     this->applyPageStyle(scheme->SwapUsageGraphLineColor);
     this->ui->activityCard->SetTwoLineSeries(this->ui->activityGraphWidget, tr("Swap in"), tr("Swap out"),
-                                             scheme->SwapActivityGraphLineColor);
+                                             scheme->SwapActivityGraphLineColor, scheme->SwapActivityGraphSecondaryLineColor);
 }
 
 void SwapDetailWidget::onUpdated()

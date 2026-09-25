@@ -20,6 +20,7 @@
 #include "ui/uimetrics.h"
 
 #include <QApplication>
+#include <QCoreApplication>
 #include <QPalette>
 #include <QVariant>
 
@@ -27,59 +28,83 @@ ColorScheme *ColorScheme::current = nullptr;
 
 namespace
 {
+    using Category = ColorScheme::Category;
+
     const ColorScheme::ColorField kColorFields[] =
     {
-        { "CpuGraphLineColor", &ColorScheme::CpuGraphLineColor },
-        { "CpuGraphFillColor", &ColorScheme::CpuGraphFillColor },
-        { "CpuGraphSecondaryFillColor", &ColorScheme::CpuGraphSecondaryFillColor },
-        { "MemoryGraphLineColor", &ColorScheme::MemoryGraphLineColor },
-        { "MemoryGraphFillColor", &ColorScheme::MemoryGraphFillColor },
-        { "DiskGraphLineColor", &ColorScheme::DiskGraphLineColor },
-        { "DiskGraphFillColor", &ColorScheme::DiskGraphFillColor },
-        { "DiskTransferGraphLineColor", &ColorScheme::DiskTransferGraphLineColor },
-        { "DiskTransferGraphFillColor", &ColorScheme::DiskTransferGraphFillColor },
-        { "DiskTransferGraphSecondaryFillColor", &ColorScheme::DiskTransferGraphSecondaryFillColor },
-        { "NetworkGraphLineColor", &ColorScheme::NetworkGraphLineColor },
-        { "NetworkGraphFillColor", &ColorScheme::NetworkGraphFillColor },
-        { "NetworkGraphSecondaryFillColor", &ColorScheme::NetworkGraphSecondaryFillColor },
-        { "GpuGraphLineColor", &ColorScheme::GpuGraphLineColor },
-        { "GpuGraphFillColor", &ColorScheme::GpuGraphFillColor },
-        { "GpuGraphSecondaryFillColor", &ColorScheme::GpuGraphSecondaryFillColor },
-        { "SwapUsageGraphLineColor", &ColorScheme::SwapUsageGraphLineColor },
-        { "SwapUsageGraphFillColor", &ColorScheme::SwapUsageGraphFillColor },
-        { "SwapActivityGraphLineColor", &ColorScheme::SwapActivityGraphLineColor },
-        { "SwapActivityGraphFillColor", &ColorScheme::SwapActivityGraphFillColor },
-        { "SwapActivityGraphSecondaryFillColor", &ColorScheme::SwapActivityGraphSecondaryFillColor },
-        { "GraphGridColor", &ColorScheme::GraphGridColor },
-        { "GraphOverlayTextColor", &ColorScheme::GraphOverlayTextColor },
-        { "SidePanelBackgroundColor", &ColorScheme::SidePanelBackgroundColor },
-        { "SidePanelItemHoverBackgroundColor", &ColorScheme::SidePanelItemHoverBackgroundColor },
-        { "SidePanelItemSelectedTextColor", &ColorScheme::SidePanelItemSelectedTextColor },
-        { "SidePanelItemTextColor", &ColorScheme::SidePanelItemTextColor },
-        { "SidePanelItemSubtitleColor", &ColorScheme::SidePanelItemSubtitleColor },
-        { "CpuTitleColor", &ColorScheme::CpuTitleColor },
-        { "CpuHeaderValueColor", &ColorScheme::CpuHeaderValueColor },
-        { "MemoryTitleColor", &ColorScheme::MemoryTitleColor },
-        { "DiskTitleColor", &ColorScheme::DiskTitleColor },
-        { "DiskHeaderValueColor", &ColorScheme::DiskHeaderValueColor },
-        { "NetworkTitleColor", &ColorScheme::NetworkTitleColor },
-        { "GpuTitleColor", &ColorScheme::GpuTitleColor },
-        { "MutedTextColor", &ColorScheme::MutedTextColor },
-        { "StatLabelColor", &ColorScheme::StatLabelColor },
-        { "AxisLabelColor", &ColorScheme::AxisLabelColor },
-        { "MemoryLegendTextColor", &ColorScheme::MemoryLegendTextColor },
-        { "MemoryLegendUsedColor", &ColorScheme::MemoryLegendUsedColor },
-        { "MemoryLegendCompressedColor", &ColorScheme::MemoryLegendCompressedColor },
-        { "MemoryLegendDirtyColor", &ColorScheme::MemoryLegendDirtyColor },
-        { "MemoryLegendCachedColor", &ColorScheme::MemoryLegendCachedColor },
-        { "MemoryLegendFreeColor", &ColorScheme::MemoryLegendFreeColor },
-        { "MemoryBarUsedColor", &ColorScheme::MemoryBarUsedColor },
-        { "MemoryBarCompressedColor", &ColorScheme::MemoryBarCompressedColor },
-        { "MemoryBarDirtyColor", &ColorScheme::MemoryBarDirtyColor },
-        { "MemoryBarCachedColor", &ColorScheme::MemoryBarCachedColor },
-        { "MemoryBarFreeColor", &ColorScheme::MemoryBarFreeColor },
-        { "MemoryBarBorderColor", &ColorScheme::MemoryBarBorderColor }
+        { "CpuGraphLineColor", &ColorScheme::CpuGraphLineColor, Category::Cpu, QT_TRANSLATE_NOOP("ColorScheme", "Graph line") },
+        { "CpuGraphFillColor", &ColorScheme::CpuGraphFillColor, Category::Cpu, QT_TRANSLATE_NOOP("ColorScheme", "Graph fill") },
+        { "CpuGraphSecondaryFillColor", &ColorScheme::CpuGraphSecondaryFillColor, Category::Cpu, QT_TRANSLATE_NOOP("ColorScheme", "Kernel time fill") },
+        { "CpuTitleColor", &ColorScheme::CpuTitleColor, Category::Cpu, QT_TRANSLATE_NOOP("ColorScheme", "Title") },
+        { "CpuHeaderValueColor", &ColorScheme::CpuHeaderValueColor, Category::Cpu, nullptr },
+        { "MemoryGraphLineColor", &ColorScheme::MemoryGraphLineColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Graph line") },
+        { "MemoryGraphFillColor", &ColorScheme::MemoryGraphFillColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Graph fill") },
+        { "MemoryTitleColor", &ColorScheme::MemoryTitleColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Title") },
+        { "MemoryBarUsedColor", &ColorScheme::MemoryBarUsedColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Composition: in use") },
+        { "MemoryBarCompressedColor", &ColorScheme::MemoryBarCompressedColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Composition: compressed") },
+        { "MemoryBarDirtyColor", &ColorScheme::MemoryBarDirtyColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Composition: dirty") },
+        { "MemoryBarCachedColor", &ColorScheme::MemoryBarCachedColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Composition: cached") },
+        { "MemoryBarFreeColor", &ColorScheme::MemoryBarFreeColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Composition: free") },
+        { "MemoryBarBorderColor", &ColorScheme::MemoryBarBorderColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Composition: border") },
+        { "MemoryLegendUsedColor", &ColorScheme::MemoryLegendUsedColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Legend: in use") },
+        { "MemoryLegendCompressedColor", &ColorScheme::MemoryLegendCompressedColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Legend: compressed") },
+        { "MemoryLegendDirtyColor", &ColorScheme::MemoryLegendDirtyColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Legend: dirty") },
+        { "MemoryLegendCachedColor", &ColorScheme::MemoryLegendCachedColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Legend: cached") },
+        { "MemoryLegendFreeColor", &ColorScheme::MemoryLegendFreeColor, Category::Memory, QT_TRANSLATE_NOOP("ColorScheme", "Legend: free") },
+        { "DiskGraphLineColor", &ColorScheme::DiskGraphLineColor, Category::Disk, QT_TRANSLATE_NOOP("ColorScheme", "Active time line") },
+        { "DiskGraphFillColor", &ColorScheme::DiskGraphFillColor, Category::Disk, QT_TRANSLATE_NOOP("ColorScheme", "Active time fill") },
+        { "DiskTransferGraphLineColor", &ColorScheme::DiskTransferGraphLineColor, Category::Disk, QT_TRANSLATE_NOOP("ColorScheme", "Read line") },
+        { "DiskTransferGraphFillColor", &ColorScheme::DiskTransferGraphFillColor, Category::Disk, QT_TRANSLATE_NOOP("ColorScheme", "Read fill") },
+        { "DiskTransferGraphSecondaryLineColor", &ColorScheme::DiskTransferGraphSecondaryLineColor, Category::Disk, QT_TRANSLATE_NOOP("ColorScheme", "Write line") },
+        { "DiskTransferGraphSecondaryFillColor", &ColorScheme::DiskTransferGraphSecondaryFillColor, Category::Disk, nullptr },
+        { "DiskTitleColor", &ColorScheme::DiskTitleColor, Category::Disk, QT_TRANSLATE_NOOP("ColorScheme", "Title") },
+        { "DiskHeaderValueColor", &ColorScheme::DiskHeaderValueColor, Category::Disk, nullptr },
+        { "NetworkGraphLineColor", &ColorScheme::NetworkGraphLineColor, Category::Network, QT_TRANSLATE_NOOP("ColorScheme", "Receive line") },
+        { "NetworkGraphFillColor", &ColorScheme::NetworkGraphFillColor, Category::Network, QT_TRANSLATE_NOOP("ColorScheme", "Receive fill") },
+        { "NetworkGraphSecondaryLineColor", &ColorScheme::NetworkGraphSecondaryLineColor, Category::Network, QT_TRANSLATE_NOOP("ColorScheme", "Send line") },
+        { "NetworkGraphSecondaryFillColor", &ColorScheme::NetworkGraphSecondaryFillColor, Category::Network, nullptr },
+        { "NetworkTitleColor", &ColorScheme::NetworkTitleColor, Category::Network, QT_TRANSLATE_NOOP("ColorScheme", "Title") },
+        { "GpuGraphLineColor", &ColorScheme::GpuGraphLineColor, Category::Gpu, QT_TRANSLATE_NOOP("ColorScheme", "Graph line") },
+        { "GpuGraphFillColor", &ColorScheme::GpuGraphFillColor, Category::Gpu, QT_TRANSLATE_NOOP("ColorScheme", "Graph fill") },
+        { "GpuGraphSecondaryLineColor", &ColorScheme::GpuGraphSecondaryLineColor, Category::Gpu, QT_TRANSLATE_NOOP("ColorScheme", "Copy RX line") },
+        { "GpuGraphSecondaryFillColor", &ColorScheme::GpuGraphSecondaryFillColor, Category::Gpu, nullptr },
+        { "GpuTitleColor", &ColorScheme::GpuTitleColor, Category::Gpu, QT_TRANSLATE_NOOP("ColorScheme", "Title") },
+        { "SwapUsageGraphLineColor", &ColorScheme::SwapUsageGraphLineColor, Category::Swap, QT_TRANSLATE_NOOP("ColorScheme", "Usage line and title") },
+        { "SwapUsageGraphFillColor", &ColorScheme::SwapUsageGraphFillColor, Category::Swap, QT_TRANSLATE_NOOP("ColorScheme", "Usage fill") },
+        { "SwapActivityGraphLineColor", &ColorScheme::SwapActivityGraphLineColor, Category::Swap, QT_TRANSLATE_NOOP("ColorScheme", "Swap in line") },
+        { "SwapActivityGraphFillColor", &ColorScheme::SwapActivityGraphFillColor, Category::Swap, QT_TRANSLATE_NOOP("ColorScheme", "Swap in fill") },
+        { "SwapActivityGraphSecondaryLineColor", &ColorScheme::SwapActivityGraphSecondaryLineColor, Category::Swap, QT_TRANSLATE_NOOP("ColorScheme", "Swap out line") },
+        { "SwapActivityGraphSecondaryFillColor", &ColorScheme::SwapActivityGraphSecondaryFillColor, Category::Swap, nullptr },
+        { "GraphGridColor", &ColorScheme::GraphGridColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Graph grid") },
+        { "GraphOverlayTextColor", &ColorScheme::GraphOverlayTextColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Graph overlay text") },
+        { "AxisLabelColor", &ColorScheme::AxisLabelColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Axis labels") },
+        { "StatLabelColor", &ColorScheme::StatLabelColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Statistic labels") },
+        { "MutedTextColor", &ColorScheme::MutedTextColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Secondary text") },
+        { "MemoryLegendTextColor", &ColorScheme::MemoryLegendTextColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Legend text") },
+        { "SidePanelBackgroundColor", &ColorScheme::SidePanelBackgroundColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Side panel background") },
+        { "SidePanelItemHoverBackgroundColor", &ColorScheme::SidePanelItemHoverBackgroundColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Side panel hover") },
+        { "SidePanelItemTextColor", &ColorScheme::SidePanelItemTextColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Side panel text") },
+        { "SidePanelItemSelectedTextColor", &ColorScheme::SidePanelItemSelectedTextColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Side panel selected text") },
+        { "SidePanelItemSubtitleColor", &ColorScheme::SidePanelItemSubtitleColor, Category::General, QT_TRANSLATE_NOOP("ColorScheme", "Side panel subtitle") }
     };
+
+    const QColor kBlack(0, 0, 0);
+    const QColor kWhite(255, 255, 255);
+    const QColor kGray(128, 128, 128);
+
+    //! Moves color towards target by amount (0 keeps color, 1 returns target).
+    QColor toward(const QColor &target, const QColor &color, qreal amount)
+    {
+        return UiMetrics::Mix(target, color, amount);
+    }
+
+    //! Same saturation family, hue turned by degrees; used for colors that must stand apart from the base.
+    QColor turnHue(const QColor &color, int degrees, qreal saturation, qreal value)
+    {
+        const int hue = qMax(0, color.hsvHue());
+        return QColor::fromHsvF(static_cast<float>(((hue + degrees) % 360) / 360.0),
+                                static_cast<float>(saturation), static_cast<float>(value));
+    }
 
     QColor colorFromVariant(const QVariant &value, const QColor &fallback)
     {
@@ -99,6 +124,49 @@ namespace
         const QColor color(text);
         return color.isValid() ? color : fallback;
     }
+}
+
+ColorScheme::Settings ColorScheme::Settings::Defaults()
+{
+    Settings settings;
+    settings.Palette = {
+        QColor(0x00, 0xbc, 0xff),   // cyan
+        QColor(0x44, 0xa8, 0xff),   // blue
+        QColor(0xcc, 0x44, 0xcc),   // purple
+        QColor(0xe0, 0x5a, 0xa0),   // pink
+        QColor(0xe0, 0x52, 0x4f),   // red
+        QColor(0xdb, 0x8b, 0x3a),   // orange
+        QColor(0xcc, 0x88, 0x44),   // amber
+        QColor(0xd4, 0xb5, 0x37),   // yellow
+        QColor(0x66, 0xbb, 0x44),   // green
+        QColor(0x2b, 0xb5, 0xa0)    // teal
+    };
+    // Indexed by Category: CPU cyan, memory purple, disk green, network orange, GPU blue, swap amber.
+    settings.Assignments = { 0, 2, 8, 5, 1, 6 };
+    return settings;
+}
+
+void ColorScheme::Settings::Normalize()
+{
+    const Settings defaults = Settings::Defaults();
+    if (this->Palette.isEmpty())
+        this->Palette = defaults.Palette;
+    while (this->Assignments.size() < ColorScheme::CategoryCount)
+        this->Assignments.append(defaults.Assignments.at(this->Assignments.size()));
+    this->Assignments.resize(ColorScheme::CategoryCount);
+    for (int &index : this->Assignments)
+        index = qBound(0, index, static_cast<int>(this->Palette.size()) - 1);
+}
+
+QColor ColorScheme::Settings::BaseColor(Category category) const
+{
+    const int slot = static_cast<int>(category);
+    if (slot < 0 || slot >= this->Assignments.size())
+        return QColor();
+    const int index = this->Assignments.at(slot);
+    if (index < 0 || index >= this->Palette.size())
+        return QColor();
+    return this->Palette.at(index);
 }
 
 ColorScheme *ColorScheme::GetCurrent()
@@ -126,6 +194,36 @@ const QVector<ColorScheme::ColorField> &ColorScheme::Fields()
     return fields;
 }
 
+QString ColorScheme::CategoryName(Category category)
+{
+    switch (category)
+    {
+        case Category::Cpu:     return QCoreApplication::translate("ColorScheme", "CPU");
+        case Category::Memory:  return QCoreApplication::translate("ColorScheme", "Memory");
+        case Category::Disk:    return QCoreApplication::translate("ColorScheme", "Disk");
+        case Category::Network: return QCoreApplication::translate("ColorScheme", "Network");
+        case Category::Gpu:     return QCoreApplication::translate("ColorScheme", "GPU");
+        case Category::Swap:    return QCoreApplication::translate("ColorScheme", "Swap");
+        case Category::General: return QCoreApplication::translate("ColorScheme", "General");
+    }
+    return QString();
+}
+
+QString ColorScheme::CategoryKey(Category category)
+{
+    switch (category)
+    {
+        case Category::Cpu:     return "cpu";
+        case Category::Memory:  return "memory";
+        case Category::Disk:    return "disk";
+        case Category::Network: return "network";
+        case Category::Gpu:     return "gpu";
+        case Category::Swap:    return "swap";
+        case Category::General: return "general";
+    }
+    return QString();
+}
+
 void ColorScheme::Install(ColorScheme *scheme)
 {
     delete ColorScheme::current;
@@ -146,6 +244,116 @@ void ColorScheme::applyPaletteNeutrals()
     this->MutedTextColor = UiMetrics::SecondaryTextColor(palette);
     this->StatLabelColor = UiMetrics::SecondaryTextColor(palette);
     this->AxisLabelColor = UiMetrics::TertiaryTextColor(palette);
+    this->MemoryLegendTextColor = UiMetrics::SecondaryTextColor(palette);
+}
+
+void ColorScheme::applyBaseColor(Category category, const QColor &base_color)
+{
+    if (!base_color.isValid())
+        return;
+
+    const bool dark = this->DarkMode;
+    QColor base = base_color.toRgb();
+    base.setAlpha(255);
+    const QColor text = dark ? kWhite : kBlack;
+
+    // Lines keep the base color on dark backgrounds and are deepened a little on light ones;
+    // fills are the base pushed towards the background.
+    const QColor line = dark ? base : toward(kBlack, base, 0.15);
+    const QColor fill = dark ? toward(kBlack, base, 0.6) : toward(kWhite, base, 0.6);
+    const QColor deepFill = dark ? UiMetrics::WithAlpha(toward(kBlack, base, 0.78), 160)
+                                 : UiMetrics::WithAlpha(toward(kWhite, base, 0.35), 130);
+    // Transfer style graphs (disk read, swap in) use a lighter line than the page's main graph.
+    const QColor lightLine = dark ? toward(kWhite, base, 0.2) : toward(kWhite, line, 0.15);
+    // The second series of a two-line graph is pulled towards the text color so it stays distinct.
+    const QColor secondLine = toward(text, line, 0.45);
+    const QColor secondLightLine = toward(text, lightLine, 0.45);
+    const QColor headerValue = toward(text, base, 0.5);
+
+    switch (category)
+    {
+        case Category::Cpu:
+            this->CpuGraphLineColor = line;
+            this->CpuGraphFillColor = UiMetrics::WithAlpha(fill, 120);
+            this->CpuGraphSecondaryFillColor = deepFill;
+            this->CpuTitleColor = line;
+            this->CpuHeaderValueColor = headerValue;
+            break;
+
+        case Category::Memory:
+        {
+            const QColor muted = toward(kGray, base, 0.5);
+            const QColor dirty = turnHue(base, 100, dark ? 1.0 : 0.7, dark ? 0.73 : 0.82);
+            this->MemoryGraphLineColor = line;
+            this->MemoryGraphFillColor = UiMetrics::WithAlpha(dark ? toward(kBlack, base, 0.5) : toward(kWhite, base, 0.65), 130);
+            this->MemoryTitleColor = line;
+            this->MemoryBarDirtyColor = dirty;
+            this->MemoryLegendDirtyColor = dirty;
+            if (dark)
+            {
+                this->MemoryBarUsedColor = base;
+                this->MemoryBarCompressedColor = toward(kBlack, muted, 0.35);
+                this->MemoryBarCachedColor = toward(kBlack, base, 0.6);
+                this->MemoryBarFreeColor = toward(kBlack, base, 0.93);
+                this->MemoryBarBorderColor = toward(kBlack, muted, 0.15);
+                this->MemoryLegendUsedColor = base;
+                this->MemoryLegendCompressedColor = muted;
+                this->MemoryLegendCachedColor = this->MemoryBarCachedColor;
+                this->MemoryLegendFreeColor = toward(kBlack, base, 0.8);
+            } else
+            {
+                this->MemoryBarUsedColor = toward(kWhite, base, 0.35);
+                this->MemoryBarCompressedColor = toward(kWhite, muted, 0.35);
+                this->MemoryBarCachedColor = toward(kWhite, base, 0.7);
+                this->MemoryBarFreeColor = toward(kWhite, base, 0.9);
+                this->MemoryBarBorderColor = toward(kWhite, muted, 0.2);
+                this->MemoryLegendUsedColor = line;
+                this->MemoryLegendCompressedColor = toward(kWhite, muted, 0.1);
+                this->MemoryLegendCachedColor = toward(kWhite, muted, 0.3);
+                this->MemoryLegendFreeColor = toward(kGray, base, 0.85);
+            }
+            break;
+        }
+
+        case Category::Disk:
+            this->DiskGraphLineColor = line;
+            this->DiskGraphFillColor = UiMetrics::WithAlpha(fill, 120);
+            this->DiskTransferGraphLineColor = lightLine;
+            this->DiskTransferGraphFillColor = UiMetrics::WithAlpha(fill, dark ? 100 : 110);
+            this->DiskTransferGraphSecondaryFillColor = deepFill;
+            this->DiskTransferGraphSecondaryLineColor = secondLightLine;
+            this->DiskTitleColor = line;
+            this->DiskHeaderValueColor = headerValue;
+            break;
+
+        case Category::Network:
+            this->NetworkGraphLineColor = line;
+            this->NetworkGraphFillColor = UiMetrics::WithAlpha(fill, 110);
+            this->NetworkGraphSecondaryFillColor = deepFill;
+            this->NetworkGraphSecondaryLineColor = secondLine;
+            this->NetworkTitleColor = line;
+            break;
+
+        case Category::Gpu:
+            this->GpuGraphLineColor = line;
+            this->GpuGraphFillColor = UiMetrics::WithAlpha(fill, 110);
+            this->GpuGraphSecondaryFillColor = deepFill;
+            this->GpuGraphSecondaryLineColor = secondLine;
+            this->GpuTitleColor = line;
+            break;
+
+        case Category::Swap:
+            this->SwapUsageGraphLineColor = line;
+            this->SwapUsageGraphFillColor = UiMetrics::WithAlpha(fill, 120);
+            this->SwapActivityGraphLineColor = lightLine;
+            this->SwapActivityGraphFillColor = UiMetrics::WithAlpha(fill, 100);
+            this->SwapActivityGraphSecondaryFillColor = deepFill;
+            this->SwapActivityGraphSecondaryLineColor = secondLightLine;
+            break;
+
+        case Category::General:
+            break;
+    }
 }
 
 ColorScheme ColorScheme::DefaultDark()
@@ -153,49 +361,12 @@ ColorScheme ColorScheme::DefaultDark()
     ColorScheme scheme;
     scheme.DarkMode = true;
     scheme.applyPaletteNeutrals();
-
-    scheme.CpuGraphLineColor = QColor(0x00, 0xbc, 0xff);              // bright cyan
-    scheme.CpuGraphFillColor = QColor(0x00, 0x4c, 0x8a, 120);         // dark blue, semi-transparent
-    scheme.CpuGraphSecondaryFillColor = QColor(0x00, 0x22, 0x55, 160); // very dark navy, semi-transparent
-    scheme.MemoryGraphLineColor = QColor(0xcc, 0x44, 0xcc);            // medium purple
-    scheme.MemoryGraphFillColor = QColor(0x66, 0x11, 0x66, 130);       // dark purple, semi-transparent
-    scheme.DiskGraphLineColor = QColor(0x66, 0xbb, 0x44);              // medium green
-    scheme.DiskGraphFillColor = QColor(0x33, 0x66, 0x22, 120);         // dark green, semi-transparent
-    scheme.DiskTransferGraphLineColor = QColor(0x88, 0xcc, 0x66);      // light green
-    scheme.DiskTransferGraphFillColor = QColor(0x33, 0x66, 0x22, 100); // dark green, semi-transparent
-    scheme.DiskTransferGraphSecondaryFillColor = QColor(0x1f, 0x44, 0x15, 120); // very dark green, semi-transparent
-    scheme.NetworkGraphLineColor = QColor(0xdb, 0x8b, 0x3a);           // orange
-    scheme.NetworkGraphFillColor = QColor(0x66, 0x3f, 0x1f, 110);      // dark brown, semi-transparent
-    scheme.NetworkGraphSecondaryFillColor = QColor(0x4a, 0x28, 0x10, 130); // very dark brown, semi-transparent
-    scheme.GpuGraphLineColor = QColor(0x44, 0xa8, 0xff);               // light blue
-    scheme.GpuGraphFillColor = QColor(0x1e, 0x4d, 0x82, 110);          // dark blue, semi-transparent
-    scheme.GpuGraphSecondaryFillColor = QColor(0x14, 0x33, 0x58, 130); // very dark blue, semi-transparent
-    scheme.SwapUsageGraphLineColor = QColor(0xcc, 0x88, 0x44);         // amber
-    scheme.SwapUsageGraphFillColor = QColor(0x66, 0x33, 0x11, 120);    // dark brown, semi-transparent
-    scheme.SwapActivityGraphLineColor = QColor(0xcc, 0xaa, 0x66);      // tan/gold
-    scheme.SwapActivityGraphFillColor = QColor(0x66, 0x44, 0x22, 100); // dark tan, semi-transparent
-    scheme.SwapActivityGraphSecondaryFillColor = QColor(0x4a, 0x2d, 0x14, 120); // very dark brown, semi-transparent
     scheme.GraphGridColor = QColor(0x88, 0x88, 0x99, 70);              // grey-blue, faint
     scheme.GraphOverlayTextColor = QColor(245, 245, 245, 220);         // near white, semi-transparent
-    scheme.CpuTitleColor = scheme.CpuGraphLineColor;
-    scheme.CpuHeaderValueColor = QColor(0xaa, 0xcc, 0xff);              // pale blue
-    scheme.MemoryTitleColor = scheme.MemoryGraphLineColor;
-    scheme.DiskTitleColor = scheme.DiskGraphLineColor;
-    scheme.DiskHeaderValueColor = QColor(0xaa, 0xdd, 0xaa);             // pale green
-    scheme.NetworkTitleColor = scheme.NetworkGraphLineColor;
-    scheme.GpuTitleColor = scheme.GpuGraphLineColor;
-    scheme.MemoryLegendTextColor = QColor(0xaa, 0xaa, 0xaa);            // medium grey
-    scheme.MemoryLegendUsedColor = scheme.MemoryGraphLineColor;
-    scheme.MemoryLegendCompressedColor = QColor(0xaa, 0x66, 0xaa);      // muted purple
-    scheme.MemoryLegendDirtyColor = QColor(0xbb, 0x88, 0x00);           // amber/dark yellow
-    scheme.MemoryLegendCachedColor = QColor(0x55, 0x22, 0x55);          // dark purple
-    scheme.MemoryLegendFreeColor = QColor(0x33, 0x33, 0x33);            // very dark grey
-    scheme.MemoryBarUsedColor = scheme.MemoryGraphLineColor;
-    scheme.MemoryBarCompressedColor = QColor(0x77, 0x44, 0x77);         // dark purple
-    scheme.MemoryBarDirtyColor = QColor(0xbb, 0x88, 0x00);              // amber/dark yellow
-    scheme.MemoryBarCachedColor = QColor(0x55, 0x22, 0x55);             // dark purple
-    scheme.MemoryBarFreeColor = QColor(0x11, 0x08, 0x11);               // near black
-    scheme.MemoryBarBorderColor = QColor(0x88, 0x44, 0x88);             // muted purple
+
+    const Settings defaults = Settings::Defaults();
+    for (int i = 0; i < ColorScheme::CategoryCount; ++i)
+        scheme.applyBaseColor(static_cast<Category>(i), defaults.BaseColor(static_cast<Category>(i)));
     return scheme;
 }
 
@@ -204,49 +375,25 @@ ColorScheme ColorScheme::DefaultLight()
     ColorScheme scheme;
     scheme.DarkMode = false;
     scheme.applyPaletteNeutrals();
-
-    scheme.CpuGraphLineColor = QColor(0x00, 0x8f, 0xcc);              // medium blue
-    scheme.CpuGraphFillColor = QColor(0x99, 0xd9, 0xff, 120);         // pale sky blue, semi-transparent
-    scheme.CpuGraphSecondaryFillColor = QColor(0x5c, 0xb9, 0xec, 130); // light blue, semi-transparent
-    scheme.MemoryGraphLineColor = QColor(0xb0, 0x3d, 0xb0);            // medium purple
-    scheme.MemoryGraphFillColor = QColor(0xe7, 0xba, 0xe7, 130);       // pale lavender, semi-transparent
-    scheme.DiskGraphLineColor = QColor(0x5a, 0x9d, 0x3b);              // medium green
-    scheme.DiskGraphFillColor = QColor(0xc9, 0xe1, 0xbf, 120);         // pale green, semi-transparent
-    scheme.DiskTransferGraphLineColor = QColor(0x77, 0xb8, 0x4f);      // medium-light green
-    scheme.DiskTransferGraphFillColor = QColor(0xd8, 0xea, 0xcf, 110); // very pale green, semi-transparent
-    scheme.DiskTransferGraphSecondaryFillColor = QColor(0xbc, 0xd8, 0xad, 125); // light sage green, semi-transparent
-    scheme.NetworkGraphLineColor = QColor(0xc8, 0x74, 0x1d);           // burnt orange
-    scheme.NetworkGraphFillColor = QColor(0xf0, 0xcd, 0xaa, 115);      // pale peach, semi-transparent
-    scheme.NetworkGraphSecondaryFillColor = QColor(0xe2, 0xb1, 0x7a, 125); // light tan/orange, semi-transparent
-    scheme.GpuGraphLineColor = QColor(0x2e, 0x87, 0xd1);               // medium blue
-    scheme.GpuGraphFillColor = QColor(0xb6, 0xd6, 0xf3, 115);          // pale blue, semi-transparent
-    scheme.GpuGraphSecondaryFillColor = QColor(0x8b, 0xbf, 0xe9, 125); // light blue, semi-transparent
-    scheme.SwapUsageGraphLineColor = QColor(0xb4, 0x76, 0x35);         // medium brown
-    scheme.SwapUsageGraphFillColor = QColor(0xe7, 0xc9, 0xaa, 120);    // pale tan, semi-transparent
-    scheme.SwapActivityGraphLineColor = QColor(0xb3, 0x8d, 0x4b);      // golden tan
-    scheme.SwapActivityGraphFillColor = QColor(0xe8, 0xd8, 0xb8, 110); // pale gold, semi-transparent
-    scheme.SwapActivityGraphSecondaryFillColor = QColor(0xd5, 0xb8, 0x88, 125); // light gold, semi-transparent
     scheme.GraphGridColor = QColor(0x80, 0x80, 0x80, 48);              // grey, faint
     scheme.GraphOverlayTextColor = QColor(35, 35, 35, 220);            // near black, semi-transparent
-    scheme.CpuTitleColor = scheme.CpuGraphLineColor;
-    scheme.CpuHeaderValueColor = QColor(0x5d, 0x84, 0xaa);              // steel blue
-    scheme.MemoryTitleColor = scheme.MemoryGraphLineColor;
-    scheme.DiskTitleColor = scheme.DiskGraphLineColor;
-    scheme.DiskHeaderValueColor = QColor(0x74, 0xa5, 0x5d);             // medium green
-    scheme.NetworkTitleColor = scheme.NetworkGraphLineColor;
-    scheme.GpuTitleColor = scheme.GpuGraphLineColor;
-    scheme.MemoryLegendTextColor = QColor(0x77, 0x77, 0x77);            // medium grey
-    scheme.MemoryLegendUsedColor = scheme.MemoryGraphLineColor;
-    scheme.MemoryLegendCompressedColor = QColor(0xb4, 0x73, 0xb4);      // medium purple
-    scheme.MemoryLegendDirtyColor = QColor(0xb0, 0x85, 0x23);           // golden amber
-    scheme.MemoryLegendCachedColor = QColor(0x9b, 0x75, 0x9b);          // muted purple
-    scheme.MemoryLegendFreeColor = QColor(0x8c, 0x8c, 0x8c);            // medium grey
-    scheme.MemoryBarUsedColor = QColor(0xc9, 0x7f, 0xc9);               // medium purple
-    scheme.MemoryBarCompressedColor = QColor(0xbc, 0x93, 0xbc);         // light purple
-    scheme.MemoryBarDirtyColor = QColor(0xd1, 0xa0, 0x3e);              // golden amber
-    scheme.MemoryBarCachedColor = QColor(0xd7, 0xbf, 0xd7);             // pale lavender
-    scheme.MemoryBarFreeColor = QColor(0xe9, 0xe9, 0xe9);               // very light grey
-    scheme.MemoryBarBorderColor = QColor(0xb0, 0x93, 0xb0);             // muted lavender
+
+    const Settings defaults = Settings::Defaults();
+    for (int i = 0; i < ColorScheme::CategoryCount; ++i)
+        scheme.applyBaseColor(static_cast<Category>(i), defaults.BaseColor(static_cast<Category>(i)));
+    return scheme;
+}
+
+ColorScheme ColorScheme::Resolve(const Settings &settings, bool dark, bool applyOverrides)
+{
+    Settings normalized = settings;
+    normalized.Normalize();
+
+    ColorScheme scheme = dark ? ColorScheme::DefaultDark() : ColorScheme::DefaultLight();
+    for (int i = 0; i < ColorScheme::CategoryCount; ++i)
+        scheme.applyBaseColor(static_cast<Category>(i), normalized.BaseColor(static_cast<Category>(i)));
+    if (applyOverrides)
+        scheme.ApplyVariantMap(normalized.Overrides);
     return scheme;
 }
 

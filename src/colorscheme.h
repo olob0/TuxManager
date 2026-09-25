@@ -20,24 +20,66 @@
 #define COLORSCHEME_H
 
 #include <QColor>
+#include <QList>
+#include <QString>
 #include <QVector>
 #include <QVariantMap>
 
 class ColorScheme
 {
     public:
+        //! Resource a color belongs to. Every resource category gets one base color from the
+        //! palette; General holds the neutral colors that follow the system theme.
+        enum class Category
+        {
+            Cpu,
+            Memory,
+            Disk,
+            Network,
+            Gpu,
+            Swap,
+            General
+        };
+        //! Number of resource categories (everything before General).
+        static constexpr int CategoryCount = 6;
+
         struct ColorField
         {
             const char *Name;
             QColor ColorScheme::*Member;
+            Category Group;
+            //! Name shown in the color dialog; nullptr keeps a field out of it (unused or legacy).
+            const char *Label;
+        };
+
+        //! What the user customizes: a palette of base colors, which of them each category uses,
+        //! and single colors pinned to a custom value. Everything else is derived.
+        struct Settings
+        {
+            QList<QColor> Palette;
+            //! Palette index per resource category, indexed by Category.
+            QVector<int>  Assignments;
+            //! Field name -> custom color.
+            QVariantMap   Overrides;
+
+            static Settings Defaults();
+            //! Clamps assignments into the palette and drops a broken palette for the defaults.
+            void Normalize();
+            QColor BaseColor(Category category) const;
         };
 
         static ColorScheme *GetCurrent();
         static ColorScheme DefaultLight();
         static ColorScheme DefaultDark();
+        //! Builds the scheme for the current (dark or light) theme from the user's settings.
+        //! Without overrides it returns the automatic colors, which the dialog shows as defaults.
+        static ColorScheme Resolve(const Settings &settings, bool dark, bool applyOverrides = true);
         static bool DetectDarkMode();
         static void Install(ColorScheme *scheme);
         static const QVector<ColorField> &Fields();
+        static QString CategoryName(Category category);
+        //! Stable key of a category for the configuration file.
+        static QString CategoryKey(Category category);
 
         ColorScheme();
         QVariantMap ToVariantMap() const;
@@ -55,17 +97,21 @@ class ColorScheme
         QColor DiskTransferGraphLineColor;
         QColor DiskTransferGraphFillColor;
         QColor DiskTransferGraphSecondaryFillColor;
+        QColor DiskTransferGraphSecondaryLineColor;
         QColor NetworkGraphLineColor;
         QColor NetworkGraphFillColor;
         QColor NetworkGraphSecondaryFillColor;
+        QColor NetworkGraphSecondaryLineColor;
         QColor GpuGraphLineColor;
         QColor GpuGraphFillColor;
         QColor GpuGraphSecondaryFillColor;
+        QColor GpuGraphSecondaryLineColor;
         QColor SwapUsageGraphLineColor;
         QColor SwapUsageGraphFillColor;
         QColor SwapActivityGraphLineColor;
         QColor SwapActivityGraphFillColor;
         QColor SwapActivityGraphSecondaryFillColor;
+        QColor SwapActivityGraphSecondaryLineColor;
         QColor GraphGridColor;
         QColor GraphOverlayTextColor;
         QColor SidePanelBackgroundColor;
@@ -99,6 +145,8 @@ class ColorScheme
     private:
         //! Chrome colors (side panel, labels) follow the active Qt palette so they match the system theme.
         void applyPaletteNeutrals();
+        //! Derives every color of a resource category (lines, fills, titles, ...) from its base color.
+        void applyBaseColor(Category category, const QColor &base);
 
         static ColorScheme *current;
 };

@@ -80,8 +80,27 @@ void Configuration::Load()
     // General
     this->RefreshRateMs =        s.value("General/RefreshRateMs",        this->RefreshRateMs).toInt();
     this->RefreshPaused =        s.value("General/RefreshPaused",        this->RefreshPaused).toBool();
-    this->UseCustomColorScheme = s.value("General/UseCustomColorScheme", this->UseCustomColorScheme).toBool();
-    this->CustomColorScheme =    s.value("General/CustomColorScheme",    this->CustomColorScheme).toMap();
+    // Colors. The old all-or-nothing custom scheme (General/CustomColorScheme) is not migrated:
+    // it pinned every color, which would leave the palette without any effect.
+    if (s.contains("Colors/Palette"))
+    {
+        this->Colors.Palette.clear();
+        for (const QString &hex : s.value("Colors/Palette").toStringList())
+        {
+            const QColor color(hex);
+            if (color.isValid())
+                this->Colors.Palette.append(color);
+        }
+    }
+    const QVariantMap assignments = s.value("Colors/Assignments").toMap();
+    for (int i = 0; i < ColorScheme::CategoryCount; ++i)
+    {
+        const QString key = ColorScheme::CategoryKey(static_cast<ColorScheme::Category>(i));
+        if (assignments.contains(key))
+            this->Colors.Assignments[i] = assignments.value(key).toInt();
+    }
+    this->Colors.Overrides = s.value("Colors/Overrides").toMap();
+    this->Colors.Normalize();
     this->EUID = ::geteuid();
     this->IsSuperuser = (this->EUID == 0);
 
@@ -150,12 +169,7 @@ void Configuration::Load()
     // we always start with either dark or light default even if there is customization layered over it,
     // this is for future version compatibility, so that if any color is added, we always load default
     // first and then we overwrite it with customizations (missing custom color won't break stuff)
-    ColorScheme *scheme = new ColorScheme(ColorScheme::DetectDarkMode()
-                                          ? ColorScheme::DefaultDark()
-                                          : ColorScheme::DefaultLight());
-    if (this->UseCustomColorScheme)
-        scheme->ApplyVariantMap(this->CustomColorScheme);
-    ColorScheme::Install(scheme);
+    ColorScheme::Install(new ColorScheme(ColorScheme::Resolve(this->Colors, ColorScheme::DetectDarkMode())));
 }
 
 void Configuration::Save()
@@ -170,8 +184,17 @@ void Configuration::Save()
     // General
     s.setValue("General/RefreshRateMs",         this->RefreshRateMs);
     s.setValue("General/RefreshPaused",         this->RefreshPaused);
-    s.setValue("General/UseCustomColorScheme",  this->UseCustomColorScheme);
-    s.setValue("General/CustomColorScheme",     this->CustomColorScheme);
+
+    // Colors
+    QStringList palette;
+    for (const QColor &color : std::as_const(this->Colors.Palette))
+        palette.append(color.name());
+    QVariantMap assignments;
+    for (int i = 0; i < ColorScheme::CategoryCount && i < this->Colors.Assignments.size(); ++i)
+        assignments.insert(ColorScheme::CategoryKey(static_cast<ColorScheme::Category>(i)), this->Colors.Assignments.at(i));
+    s.setValue("Colors/Palette",                palette);
+    s.setValue("Colors/Assignments",            assignments);
+    s.setValue("Colors/Overrides",              this->Colors.Overrides);
 
     // Processes
     s.setValue("Processes/ShowKernelTasks",     this->ShowKernelTasks);

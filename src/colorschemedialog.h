@@ -22,16 +22,25 @@
 #include "colorscheme.h"
 
 #include <QDialog>
+#include <QHash>
 #include <QVector>
 
-class QFrame;
-class QFormLayout;
+class QHBoxLayout;
+class QLabel;
+class QLineEdit;
 class QPushButton;
+class QStackedWidget;
+class QTreeWidget;
+class QTreeWidgetItem;
+class SegmentedControl;
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ColorSchemeDialog; }
 QT_END_NAMESPACE
 
+/// Color customization. The simple page edits a palette of base colors and assigns one to each
+/// resource category; every tone is derived from it. The advanced page lists every single color
+/// and lets the user pin any of them to a custom value.
 class ColorSchemeDialog : public QDialog
 {
     Q_OBJECT
@@ -40,26 +49,51 @@ class ColorSchemeDialog : public QDialog
         explicit ColorSchemeDialog(QWidget *parent = nullptr);
         ~ColorSchemeDialog();
 
-        bool UseCustomScheme() const;
-        ColorScheme BuildScheme() const;
+        ColorScheme::Settings GetSettings() const { return this->m_settings; }
 
     private:
-        struct RowWidgets
+        struct CategoryRow
         {
-            const ColorScheme::ColorField *Field { nullptr };
-            QFrame *Preview { nullptr };
-            QPushButton *PickButton { nullptr };
-            QPushButton *ResetButton { nullptr };
+            ColorScheme::Category Category;
+            QWidget     *Preview { nullptr };
+            QLabel      *Name { nullptr };
+            QHBoxLayout *Swatches { nullptr };
         };
 
-        void refreshUi();
-        void setColor(const ColorScheme::ColorField &field, const QColor &color);
-        static QString labelForField(const QString &name);
+        struct FieldItem
+        {
+            const ColorScheme::ColorField *Field { nullptr };
+            QTreeWidgetItem *Item { nullptr };
+        };
+
+        QWidget *buildSimplePage();
+        QWidget *buildAdvancedPage();
+        void setMode(int mode);
+        void refresh();
+        void refreshPalette();
+        void refreshCategories();
+        void refreshAdvanced();
+        void showPaletteMenu(int index, QWidget *anchor);
+        void changePaletteColor(int index);
+        void removePaletteColor(int index);
+        void addPaletteColor();
+        void editField(const ColorScheme::ColorField *field);
+        void applyFilter(const QString &text);
 
         Ui::ColorSchemeDialog *ui { nullptr };
-        ColorScheme m_scheme;
-        ColorScheme m_defaultScheme;
-        QVector<RowWidgets> m_rows;
+        ColorScheme::Settings  m_settings;
+        bool                   m_dark { false };
+
+        SegmentedControl *m_mode { nullptr };
+        QStackedWidget   *m_pages { nullptr };
+        QPushButton      *m_resetButton { nullptr };
+        QHBoxLayout      *m_paletteLayout { nullptr };
+        QPushButton      *m_addButton { nullptr };
+        QVector<CategoryRow> m_rows;
+        QLineEdit        *m_filter { nullptr };
+        QTreeWidget      *m_tree { nullptr };
+        QHash<int, QTreeWidgetItem *> m_groupItems;
+        QVector<FieldItem> m_fieldItems;
 };
 
 #endif // COLORSCHEMEDIALOG_H

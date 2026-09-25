@@ -209,7 +209,8 @@ void GpuDetailWidget::applyStyle()
     this->applyPageStyle(scheme->GpuTitleColor);
     for (QLabel *value : std::as_const(this->m_engineValueLabels))
         WidgetStyle::ApplyTextStyle(value, QColor(), UiMetrics::TextRole::Heading);
-    this->ui->copyCard->SetTwoLineSeries(this->ui->copyBwGraphWidget, tr("TX"), tr("RX"), scheme->GpuGraphLineColor);
+    this->ui->copyCard->SetTwoLineSeries(this->ui->copyBwGraphWidget, tr("TX"), tr("RX"), scheme->GpuGraphLineColor,
+                                         scheme->GpuGraphSecondaryLineColor);
 }
 
 void GpuDetailWidget::layoutWidthChanged(int graphColumnWidth)

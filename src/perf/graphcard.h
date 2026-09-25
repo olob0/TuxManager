@@ -58,11 +58,10 @@ namespace Perf
             //! An empty list hides the legend.
             void SetLegend(const QList<LegendEntry> &entries);
             //! For graphs with two independent series (send / receive, read / write, ...): draws the
-            //! secondary series as its own line in a color derived from primaryColor, names both
-            //! series for the hover tooltip and shows them in the legend. Call again after the
-            //! color scheme changes.
+            //! secondary series as its own line, names both series for the hover tooltip and shows
+            //! them in the legend. Call again after the color scheme changes.
             void SetTwoLineSeries(GraphWidget *graph, const QString &primary, const QString &secondary,
-                                  const QColor &primaryColor);
+                                  const QColor &primaryColor, const QColor &secondaryColor);
             //! Re-applies padding, fonts and colors; call after the color scheme changes.
             void ApplyStyle();
 

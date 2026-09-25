@@ -106,11 +106,8 @@ void GraphCard::SetLegend(const QList<LegendEntry> &entries)
 }
 
 void GraphCard::SetTwoLineSeries(GraphWidget *graph, const QString &primary, const QString &secondary,
-                                 const QColor &primaryColor)
+                                 const QColor &primaryColor, const QColor &secondaryColor)
 {
-    // The secondary line is pulled towards the text color so it stays distinct from the primary
-    // one in both light and dark themes.
-    const QColor secondaryColor = UiMetrics::Mix(primaryColor, this->palette().color(QPalette::WindowText), 0.45);
     graph->SetSeriesNames(primary, secondary);
     graph->SetOverlayLineColor(secondaryColor);
     this->SetLegend({ { primary, primaryColor }, { secondary, secondaryColor } });
