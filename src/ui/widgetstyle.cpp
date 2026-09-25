@@ -22,20 +22,21 @@
 
 namespace WidgetStyle
 {
-    QString TextStyle(const QColor &color, int fontSizePt, bool bold)
+    QString TextStyle(const QColor &color, UiMetrics::TextRole role)
     {
-        QString style = QString("color: %1;").arg(color.name(QColor::HexArgb));
-        if (fontSizePt > 0)
-            style += QString(" font-size: %1pt;").arg(fontSizePt);
-        if (bold)
-            style += " font-weight: bold;";
+        QString style;
+        if (color.isValid())
+            style += QString("color: %1; ").arg(color.name(QColor::HexArgb));
+        style += QString("font-size: %1pt; font-weight: %2;")
+                     .arg(QString::number(UiMetrics::PointSize(role), 'f', 1))
+                     .arg(UiMetrics::CssWeight(role));
         return style;
     }
 
-    void ApplyTextStyle(QWidget *widget, const QColor &color, int fontSizePt, bool bold)
+    void ApplyTextStyle(QWidget *widget, const QColor &color, UiMetrics::TextRole role)
     {
         if (!widget)
             return;
-        widget->setStyleSheet(TextStyle(color, fontSizePt, bold));
+        widget->setStyleSheet(TextStyle(color, role));
     }
 }

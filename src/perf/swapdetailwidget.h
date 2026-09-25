@@ -19,6 +19,7 @@
 #ifndef PERF_SWAPDETAILWIDGET_H
 #define PERF_SWAPDETAILWIDGET_H
 
+#include "detailpage.h"
 #include "swapgrapharea.h"
 #include "historybuffer.h"
 #include "graphwidget.h"
@@ -33,7 +34,7 @@ QT_END_NAMESPACE
 
 namespace Perf
 {
-    class SwapDetailWidget : public QWidget
+    class SwapDetailWidget : public DetailPage
     {
         Q_OBJECT
 
@@ -50,9 +51,9 @@ namespace Perf
             void onSwapDevicesChanged();
 
         private:
+            void applyStyle();
+
             Ui::SwapDetailWidget *ui { nullptr };
-            QVector<QLabel *> m_statLabels;
-            QVector<QLabel *> m_axisLabels;
 
             const HistoryBuffer *m_inHistory { nullptr };
             const HistoryBuffer *m_outHistory { nullptr };

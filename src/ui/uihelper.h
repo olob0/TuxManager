@@ -24,6 +24,10 @@
 #include <QVariant>
 #include <QHash>
 
+class QAbstractItemView;
+class QBoxLayout;
+class QHeaderView;
+class QLineEdit;
 class QTableView;
 class QModelIndex;
 class QMenu;
@@ -67,6 +71,19 @@ namespace UIHelper
     void AddRefreshIntervalContextMenu(QMenu *menu, QTimer *timer = nullptr, bool timerOwnerActive = false);
     //! Adds a context menu with a Copy action that copies the label text to the clipboard.
     void EnableCopyLabelContextMenu(QLabel *label);
+    //! Makes the widget ignore the mouse wheel and pass it on to its parent, so scrolling over a
+    //! combo box or spin box scrolls the page instead of silently changing the value.
+    void DisableWheelInput(QWidget *widget);
+    //! Gives a list/table/tree the shared look: cell padding, row height from the font, no grid.
+    //! Use it for every item view so all tabs read the same way.
+    void ApplyItemViewStyle(QAbstractItemView *view);
+    //! Shared frame of the list tabs (Processes, Services, Users): edge-to-edge list, padded
+    //! toolbar, search field with a find icon and a quiet status line. Any part may be nullptr.
+    void ApplyTabChrome(QWidget *tab, QBoxLayout *toolbar, QLineEdit *search, QLabel *status);
+    //! Sizes columns from a width in characters (plus cell padding), so they scale with the font
+    //! and are never narrower than their header title. With growOnly, columns keep their current
+    //! (e.g. restored) width unless it is too narrow.
+    void SizeColumnsInChars(QHeaderView *header, const QHash<int, int> &charsByColumn, bool growOnly = false);
     //! Adds a Copy graph action to an existing menu that copies the widget snapshot to the clipboard.
     QAction *AddCopyWidgetAction(QMenu *menu, QWidget *widget, const QString &text = QString());
 }

@@ -81,8 +81,13 @@ UsersWidget::UsersWidget(OS::ProcessRefreshService *processRefreshService, QWidg
 {
     this->ui->setupUi(this);
 
+    UIHelper::ApplyTabChrome(this, nullptr, nullptr, this->ui->statusLabel);
+    UIHelper::ApplyItemViewStyle(this->ui->treeWidget);
     this->ui->treeWidget->setColumnCount(3);
     this->ui->treeWidget->setHeaderLabels({ tr("User / Process"), tr("CPU"), tr("Memory") });
+    // Numeric columns: titles align with their right-aligned values
+    this->ui->treeWidget->headerItem()->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
+    this->ui->treeWidget->headerItem()->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
     this->ui->treeWidget->setRootIsDecorated(true);
     this->ui->treeWidget->setAlternatingRowColors(true);
     this->ui->treeWidget->setAnimated(false);
@@ -91,6 +96,7 @@ UsersWidget::UsersWidget(OS::ProcessRefreshService *processRefreshService, QWidg
     QHeaderView *hv = this->ui->treeWidget->header();
     hv->setSectionsClickable(true);
     hv->setSortIndicatorShown(true);
+    hv->setStretchLastSection(false);
     hv->setSectionResizeMode(0, QHeaderView::Stretch);
     hv->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     hv->setSectionResizeMode(2, QHeaderView::ResizeToContents);

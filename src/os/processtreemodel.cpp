@@ -20,6 +20,11 @@
 
 #include "appregistry.h"
 #include "../misc.h"
+#include "../ui/uimetrics.h"
+
+#include <QApplication>
+#include <QPalette>
+
 using namespace OS;
 
 ProcessTreeModel::ProcessTreeModel(QObject *parent) : QAbstractItemModel(parent), m_root(new Node())
@@ -160,36 +165,46 @@ QVariant ProcessTreeModel::data(const QModelIndex &index, int role) const
     }
 
     if (role == Qt::TextAlignmentRole)
-    {
-        switch (static_cast<Column>(index.column()))
-        {
-            case ColCpu:
-            case ColMemRss:
-            case ColMemVirt:
-            case ColMemShared:
-            case ColMemText:
-            case ColMemData:
-            case ColIoReads:
-            case ColIoWrites:
-            case ColIoReadsPerSec:
-            case ColIoWritesPerSec:
-            case ColThreads:
-            case ColPriority:
-            case ColNice:
-                return QVariant(Qt::AlignRight | Qt::AlignVCenter);
-            default:
-                return QVariant(Qt::AlignLeft | Qt::AlignVCenter);
-        }
-    }
+        return columnAlignment(index.column());
+
+    // The command line is long and secondary, keep it visually quieter than the rest of the row.
+    if (role == Qt::ForegroundRole && index.column() == ColCmdline)
+        return UiMetrics::SecondaryTextColor(QApplication::palette());
 
     return {};
 }
 
+QVariant ProcessTreeModel::columnAlignment(int column)
+{
+    switch (static_cast<Column>(column))
+    {
+        case ColCpu:
+        case ColMemRss:
+        case ColMemVirt:
+        case ColMemShared:
+        case ColMemText:
+        case ColMemData:
+        case ColIoReads:
+        case ColIoWrites:
+        case ColIoReadsPerSec:
+        case ColIoWritesPerSec:
+        case ColThreads:
+        case ColPriority:
+        case ColNice:
+            return QVariant(Qt::AlignRight | Qt::AlignVCenter);
+        default:
+            return QVariant(Qt::AlignLeft | Qt::AlignVCenter);
+    }
+}
+
 QVariant ProcessTreeModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if (orientation != Qt::Horizontal || role != Qt::DisplayRole)
+    if (orientation != Qt::Horizontal || section < 0 || section >= ColCount)
         return {};
-    if (section < 0 || section >= ColCount)
+    // Headers align like their column's values, so numbers line up under their titles.
+    if (role == Qt::TextAlignmentRole)
+        return columnAlignment(section);
+    if (role != Qt::DisplayRole)
         return {};
     return columnHeader(static_cast<Column>(section));
 }

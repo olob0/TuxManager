@@ -29,6 +29,7 @@
 #include "perf/sidepanelgroup.h"
 #include "perf/sidepanelorderdialog.h"
 #include "ui/uihelper.h"
+#include "ui/uimetrics.h"
 
 #include <QAction>
 #include <QApplication>
@@ -37,7 +38,6 @@
 #include <QMenu>
 #include <QPalette>
 #include <QPainter>
-#include <QRegularExpression>
 #include <QSplitter>
 #include <QSplitterHandle>
 
@@ -55,10 +55,7 @@ namespace
             {
                 // This brings back the line effect that we lost when we moved to a splitter
                 QPainter painter(this);
-                const QColor lineColor = ColorScheme::DetectDarkMode()
-                    ? QColor(0x55, 0x55, 0x55)
-                    : QColor(0xb8, 0xb8, 0xb8);
-                painter.setPen(lineColor);
+                painter.setPen(UiMetrics::CardBorderColor(this->palette()));
 
                 // The splitter handle is wider than the visible separator so it remains
                 // easy to grab. Draw only a single centered pixel column; painting at x=0
@@ -158,7 +155,6 @@ PerformanceWidget::PerformanceWidget(QWidget *parent) : QWidget(parent), ui(new 
     });
     connect(this->m_sidePanel, &Perf::SidePanel::itemContextMenuRequested, this, &PerformanceWidget::onSidePanelContextMenu);
 
-    this->tagTimeAxisLabels();
     this->applyGraphWindowSeconds();
     this->applyPanelVisibility();
     this->updateSamplingPolicy();
@@ -185,9 +181,11 @@ void PerformanceWidget::setupLayout()
     QHBoxLayout *lay = qobject_cast<QHBoxLayout *>(this->layout());
 
     this->m_splitter = new PerformanceSplitter(this);
-    this->m_splitter->setChildrenCollapsible(false);
     this->m_splitter->addWidget(this->m_sidePanel);
     this->m_splitter->addWidget(this->m_stack);
+    // The sidebar can be dragged shut against the window edge; the detail page cannot.
+    this->m_splitter->setCollapsible(0, true);
+    this->m_splitter->setCollapsible(1, false);
     this->m_splitter->setStretchFactor(0, 0);
     this->m_splitter->setStretchFactor(1, 1);
 
@@ -195,7 +193,7 @@ void PerformanceWidget::setupLayout()
     if (!saved_state.isEmpty())
         this->m_splitter->restoreState(saved_state);
     else
-        this->m_splitter->setSizes({ 162, 680 });
+        this->m_splitter->setSizes({ 220, 680 });
 
     connect(this->m_splitter, &QSplitter::splitterMoved, this, [this](int, int)
     {
@@ -215,9 +213,7 @@ void PerformanceWidget::setupSidePanel()
     this->m_cpuItem = new Perf::SidePanelItem(tr("CPU"), this);
     this->m_cpuItem->SetGraphColor(scheme->CpuGraphLineColor, scheme->CpuGraphFillColor);
     this->m_cpuItem->SetGraphSource(Metrics::GetCPU()->CpuHistory());
-    this->m_sidePanel->AddItem(this->m_cpuItem);
-    this->m_stack->addWidget(this->m_cpuDetail);
-    this->m_detailByItem.insert(this->m_cpuItem, this->m_cpuDetail);
+    this->addItemWithDetail(this->m_cpuItem, this->m_cpuDetail);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     // Memory item
@@ -225,9 +221,7 @@ void PerformanceWidget::setupSidePanel()
     this->m_memoryItem = new Perf::SidePanelItem(tr("Memory"), this);
     this->m_memoryItem->SetGraphColor(scheme->MemoryGraphLineColor, scheme->MemoryGraphFillColor);
     this->m_memoryItem->SetGraphSource(Metrics::GetMemory()->MemHistory());
-    this->m_sidePanel->AddItem(this->m_memoryItem);
-    this->m_stack->addWidget(this->m_memDetail);
-    this->m_detailByItem.insert(this->m_memoryItem, this->m_memDetail);
+    this->addItemWithDetail(this->m_memoryItem, this->m_memDetail);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     // Swap item
@@ -235,13 +229,19 @@ void PerformanceWidget::setupSidePanel()
     this->m_swapItem = new Perf::SidePanelItem(tr("Swap"), this);
     this->m_swapItem->SetGraphColor(scheme->SwapUsageGraphLineColor, scheme->SwapUsageGraphFillColor);
     this->m_swapItem->SetGraphSource(Metrics::GetSwap()->SwapUsageHistory());
-    this->m_sidePanel->AddItem(this->m_swapItem);
-    this->m_stack->addWidget(this->m_swapDetail);
-    this->m_detailByItem.insert(this->m_swapItem, this->m_swapDetail);
+    this->addItemWithDetail(this->m_swapItem, this->m_swapDetail);
 
     this->setupDiskPanels();
     this->setupNetworkPanels();
     this->setupGpuPanels();
+}
+
+void PerformanceWidget::addItemWithDetail(Perf::SidePanelItem *item, Perf::DetailPage *detail)
+{
+    auto *scroll = new Perf::DetailScrollArea(detail, this->m_stack);
+    this->m_sidePanel->AddItem(item);
+    this->m_stack->addWidget(scroll);
+    this->m_detailByItem.insert(item, scroll);
 }
 
 void PerformanceWidget::setupDiskPanels()
@@ -256,14 +256,12 @@ void PerformanceWidget::setupDiskPanels()
         auto *item = new Perf::SidePanelItem(tr("Disk (%1)").arg(disk.Name), this);
         item->SetGraphColor(scheme->DiskGraphLineColor, scheme->DiskGraphFillColor);
         item->SetGraphSource(disk.ActiveHistory);
-        this->m_sidePanel->AddItem(item);
         this->m_diskItems.append(item);
 
         auto *detail = new Perf::DiskDetailWidget(this);
         detail->SetDisk(i);
-        this->m_stack->addWidget(detail);
         this->m_diskDetails.append(detail);
-        this->m_detailByItem.insert(item, detail);
+        this->addItemWithDetail(item, detail);
     }
 }
 
@@ -279,14 +277,12 @@ void PerformanceWidget::setupGpuPanels()
         auto *item = new Perf::SidePanelItem(tr("GPU %1").arg(i), this);
         item->SetGraphColor(scheme->GpuGraphLineColor, scheme->GpuGraphFillColor);
         item->SetGraphSource(gpu.UtilHistory);
-        this->m_sidePanel->AddItem(item);
         this->m_gpuItems.append(item);
 
         auto *detail = new Perf::GpuDetailWidget(this);
         detail->SetGpu(i);
-        this->m_stack->addWidget(detail);
         this->m_gpuDetails.append(detail);
-        this->m_detailByItem.insert(item, detail);
+        this->addItemWithDetail(item, detail);
     }
 }
 
@@ -302,14 +298,12 @@ void PerformanceWidget::setupNetworkPanels()
         auto *item = new Perf::SidePanelItem(tr("NIC (%1)").arg(network.Name), this);
         item->SetGraphColor(scheme->NetworkGraphLineColor, scheme->NetworkGraphFillColor);
         item->SetGraphSource(network.RxHistory, 1024.0);
-        this->m_sidePanel->AddItem(item);
         this->m_networkItems.append(item);
 
         auto *detail = new Perf::NetworkDetailWidget(this);
         detail->SetNetwork(i);
-        this->m_stack->addWidget(detail);
         this->m_networkDetails.append(detail);
-        this->m_detailByItem.insert(item, detail);
+        this->addItemWithDetail(item, detail);
     }
 }
 
@@ -319,50 +313,57 @@ void PerformanceWidget::setupNetworkPanels()
 
 void PerformanceWidget::onProviderUpdated()
 {
-    // Update CPU side panel item
-    const double cpuPct = Metrics::GetCPU()->CpuPercent();
-    const int cpuTempC = Metrics::GetCPU()->CpuTemperatureC();
-    const QString cpuSub = (cpuTempC >= 0)
-                           ? tr("%1%2 %3C", "%1=value %2=percent sign %3=temperature in Celsius")
-                                 .arg(QString::number(cpuPct, 'f', 0), "%", QString::number(cpuTempC))
-                           : QString::number(cpuPct, 'f', 0) + "%";
+    const QString separator = QStringLiteral(" · ");
+    auto percent = [](double value)
+    {
+        return QString::number(value, 'f', 0) + "%";
+    };
+    auto celsius = [](int tempC)
+    {
+        return tr("%1 °C", "%1=temperature in Celsius").arg(tempC);
+    };
+    auto usedOfTotal = [](qint64 usedKb, qint64 totalKb)
+    {
+        return tr("%1 / %2", "%1=used amount %2=total amount")
+                   .arg(Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, usedKb)), 1),
+                        Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, totalKb)), 1));
+    };
+
+    // CPU: utilization, then clock and temperature
     if (CFG->PerfShowCpu)
-        this->m_cpuItem->Update(cpuSub);
-
-    // Update Memory side panel item
-    const qint64 used  = Metrics::GetMemory()->MemUsedKb();
-    const qint64 total = Metrics::GetMemory()->MemTotalKb();
-    const int    pct     = total > 0
-                           ? static_cast<int>(static_cast<double>(used) / total * 100.0)
-                           : 0;
-    const QString memSub = QString("%1/%2 (%3%)")
-                           .arg(Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, used)), 1),
-                                Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, total)), 1),
-                                QString::number(pct));
-    if (CFG->PerfShowMemory)
-        this->m_memoryItem->Update(memSub);
-
-    // Update Swap side panel item
-    const qint64 swapUsed = Metrics::GetSwap()->SwapUsedKb();
-    const qint64 swapTotal = Metrics::GetSwap()->SwapTotalKb();
-    const int swapPct = (swapTotal > 0)
-                        ? static_cast<int>(static_cast<double>(swapUsed) / static_cast<double>(swapTotal) * 100.0)
-                        : 0;
-    QString swapSub;
-    if (swapTotal > 0)
     {
-        swapSub = QString("%1/%2 (%3%)")
-                  .arg(Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, swapUsed)), 1),
-                       Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, swapTotal)), 1),
-                       QString::number(swapPct));
-    } else
-    {
-        swapSub = tr("Off");
+        QStringList detail;
+        const double mhz = Metrics::GetCPU()->CpuCurrentMhz();
+        if (mhz > 0.0)
+            detail << tr("%1 GHz").arg(mhz / 1000.0, 0, 'f', 2);
+        const int cpuTempC = Metrics::GetCPU()->CpuTemperatureC();
+        if (cpuTempC >= 0)
+            detail << celsius(cpuTempC);
+        this->m_cpuItem->Update(percent(Metrics::GetCPU()->CpuPercent()), detail.join(separator));
     }
 
-    if (CFG->PerfShowSwap)
-        this->m_swapItem->Update(swapSub);
+    // Memory: usage percentage, then used / total
+    if (CFG->PerfShowMemory)
+    {
+        const qint64 used  = Metrics::GetMemory()->MemUsedKb();
+        const qint64 total = Metrics::GetMemory()->MemTotalKb();
+        const double pct   = total > 0 ? static_cast<double>(used) / total * 100.0 : 0.0;
+        this->m_memoryItem->Update(percent(pct), usedOfTotal(used, total));
+    }
 
+    // Swap: usage percentage, then used / total
+    if (CFG->PerfShowSwap)
+    {
+        const qint64 swapUsed = Metrics::GetSwap()->SwapUsedKb();
+        const qint64 swapTotal = Metrics::GetSwap()->SwapTotalKb();
+        if (swapTotal > 0)
+            this->m_swapItem->Update(percent(static_cast<double>(swapUsed) / static_cast<double>(swapTotal) * 100.0),
+                                     usedOfTotal(swapUsed, swapTotal));
+        else
+            this->m_swapItem->Update(tr("Off"), QString());
+    }
+
+    // Disks: active time, then type and model
     if (CFG->PerfShowDisks)
     {
         for (int i = 0; i < this->m_diskItems.size(); ++i)
@@ -374,11 +375,16 @@ void PerformanceWidget::onProviderUpdated()
                 continue;
 
             const Storage::DiskInfo &disk = Metrics::GetStorage()->FromIndex(i);
-            const QString diskSub = tr("%1 %2", "%1=disk type %2=active percentage").arg(disk.Type, QString::number(disk.ActivePct, 'f', 0) + "%");
-            item->Update(diskSub);
+            QStringList detail;
+            if (!disk.Type.isEmpty())
+                detail << disk.Type;
+            if (!disk.Model.isEmpty())
+                detail << disk.Model;
+            item->Update(percent(disk.ActivePct), detail.join(separator));
         }
     }
 
+    // GPUs: utilization, then temperature and name
     if (CFG->PerfShowGpu)
     {
         for (int i = 0; i < this->m_gpuItems.size(); ++i)
@@ -390,16 +396,16 @@ void PerformanceWidget::onProviderUpdated()
                 continue;
 
             const GPU::GPUInfo &gpu = Metrics::GetGPU()->FromIndex(i);
-            const QString utilText = tr("%1%2", "%1=GPU utilization value %2=percent sign").arg(QString::number(gpu.UtilPct, 'f', 0), "%");
-            const int tempC = gpu.TemperatureC;
-            const QString sub = (tempC >= 0)
-                                ? tr("%1 %2C", "%1=GPU utilization %2=temperature in Celsius")
-                                      .arg(utilText, QString::number(tempC))
-                                : utilText;
-            item->Update(sub);
+            QStringList detail;
+            if (gpu.TemperatureC >= 0)
+                detail << celsius(gpu.TemperatureC);
+            if (!gpu.Name.isEmpty())
+                detail << gpu.Name;
+            item->Update(percent(gpu.UtilPct), detail.join(separator));
         }
     }
 
+    // NICs: download rate, then upload rate
     if (CFG->PerfShowNetwork)
     {
         for (int i = 0; i < this->m_networkItems.size(); ++i)
@@ -417,8 +423,7 @@ void PerformanceWidget::onProviderUpdated()
             const QString downloadRate = CFG->PerfNetworkUseBits
                                          ? Misc::FormatBitsPerSecond(network.RxBps)
                                          : Misc::FormatBytesPerSecond(network.RxBps);
-            const QString netSub = tr("U:%1 D:%2", "%1=upload rate %2=download rate").arg(uploadRate, downloadRate);
-            item->Update(netSub, network.MaxThroughputBps);
+            item->Update(QStringLiteral("↓ ") + downloadRate, QStringLiteral("↑ ") + uploadRate, network.MaxThroughputBps);
         }
     }
 }
@@ -708,18 +713,6 @@ void PerformanceWidget::applySidePanelGridEnabled()
         item->SetGraphGridEnabled(enabled);
     for (Perf::SidePanelItem *item : std::as_const(this->m_gpuItems))
         item->SetGraphGridEnabled(enabled);
-}
-
-void PerformanceWidget::tagTimeAxisLabels()
-{
-    static const QRegularExpression kSecondsRe("^[0-9]+\\s+seconds$");
-    for (QLabel *label : this->findChildren<QLabel *>())
-    {
-        if (!label)
-            continue;
-        if (kSecondsRe.match(label->text()).hasMatch())
-            label->setProperty("perfTimeAxisLabel", true);
-    }
 }
 
 void PerformanceWidget::applyGraphWindowSeconds()

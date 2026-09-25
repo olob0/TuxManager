@@ -11,29 +11,22 @@
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <property name="leftMargin"><number>4</number></property>
-   <property name="topMargin"><number>4</number></property>
-   <property name="rightMargin"><number>4</number></property>
-   <property name="bottomMargin"><number>4</number></property>
-   <property name="spacing"><number>4</number></property>
+   <!-- Margins and spacing are applied from UiMetrics in ProcessesWidget -->
    <item>
     <layout class="QHBoxLayout" name="toolbarLayout">
-     <item>
-      <widget class="QLabel" name="searchLabel">
-       <property name="text"><string>Search:</string></property>
-      </widget>
-     </item>
      <item>
       <widget class="QLineEdit" name="searchEdit">
        <property name="placeholderText"><string>Filter processes…</string></property>
        <property name="clearButtonEnabled"><bool>true</bool></property>
-       <property name="maximumWidth"><number>240</number></property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="runNewTaskButton">
-       <property name="text"><string>Run new task</string></property>
-      </widget>
+      <spacer name="toolbarSpacer">
+       <property name="orientation"><enum>Qt::Horizontal</enum></property>
+       <property name="sizeHint" stdset="0">
+        <size><width>40</width><height>20</height></size>
+       </property>
+      </spacer>
      </item>
      <item>
       <widget class="QPushButton" name="openTerminalButton">
@@ -41,12 +34,9 @@
       </widget>
      </item>
      <item>
-      <spacer>
-       <property name="orientation"><enum>Qt::Horizontal</enum></property>
-       <property name="sizeHint" stdset="0">
-        <size><width>40</width><height>20</height></size>
-       </property>
-      </spacer>
+      <widget class="QPushButton" name="runNewTaskButton">
+       <property name="text"><string>Run new task</string></property>
+      </widget>
      </item>
     </layout>
    </item>

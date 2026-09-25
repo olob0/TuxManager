@@ -29,8 +29,10 @@ SOURCES += \
     system/network.cpp \
     system/storage.cpp \
     system/swap.cpp \
+    ui/uimetrics.cpp \
     ui/widgetstyle.cpp \
     ui/uihelper.cpp \
+    ui/segmentedcontrol.cpp \
     configuration.cpp \
     logger.cpp \
     processeswidget.cpp \
@@ -50,7 +52,10 @@ SOURCES += \
     os/servicemodel.cpp \
     os/servicefilterproxy.cpp \
     os/servicehelper.cpp \
+    perf/detailpage.cpp \
+    perf/graphcard.cpp \
     perf/graphwidget.cpp \
+    perf/statspanel.cpp \
     perf/sidepanelitem.cpp \
     perf/sidepanel.cpp \
     perf/sidepanelgroup.cpp \
@@ -85,8 +90,10 @@ HEADERS += \
     system/network.h \
     system/storage.h \
     system/swap.h \
+    ui/uimetrics.h \
     ui/widgetstyle.h \
     ui/uihelper.h \
+    ui/segmentedcontrol.h \
     configuration.h \
     historybuffer.h \
     logger.h \
@@ -107,7 +114,10 @@ HEADERS += \
     os/servicemodel.h \
     os/servicefilterproxy.h \
     os/servicehelper.h \
+    perf/detailpage.h \
+    perf/graphcard.h \
     perf/graphwidget.h \
+    perf/statspanel.h \
     perf/sidepanelitem.h \
     perf/sidepanel.h \
     perf/sidepanelgroup.h \

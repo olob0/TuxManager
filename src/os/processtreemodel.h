@@ -73,6 +73,8 @@ namespace OS
             QModelIndex IndexForPid(pid_t pid) const;
 
         private:
+            //! Alignment shared by the cells and the header of a column.
+            static QVariant columnAlignment(int column);
             struct Node
             {
                 Process process;

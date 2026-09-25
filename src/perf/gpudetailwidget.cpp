@@ -20,9 +20,11 @@
 #include "configuration.h"
 #include "metrics.h"
 #include "ui_gpudetailwidget.h"
+#include "graphcard.h"
 #include "../colorscheme.h"
 #include "../misc.h"
 #include "../ui/uihelper.h"
+#include "../ui/uimetrics.h"
 #include "../ui/widgetstyle.h"
 
 #include <QGridLayout>
@@ -34,9 +36,12 @@ using namespace Perf;
 namespace
 {
     const HistoryBuffer kEmptyHistory;
+    constexpr int kMinEngineCardWidth = 180;
+    //! Utilization and memory share one row from this graph column width on.
+    constexpr int kOverviewRowMinWidth = 900;
 }
 
-GpuDetailWidget::GpuDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::GpuDetailWidget)
+GpuDetailWidget::GpuDetailWidget(QWidget *parent) : DetailPage(parent), ui(new Ui::GpuDetailWidget)
 {
     this->ui->setupUi(this);
 
@@ -47,6 +52,34 @@ GpuDetailWidget::GpuDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::
     if (this->m_selectedEngineBySlot.size() > 4)
         this->m_selectedEngineBySlot.resize(4);
 
+    this->ui->statsPanel->AddStat(this->ui->utilLabel, this->ui->utilValueLabel);
+    this->ui->statsPanel->AddStat(this->ui->tempLabel, this->ui->tempValueLabel);
+    this->ui->statsPanel->AddStat(this->ui->coreClockLabel, this->ui->coreClockValueLabel);
+    this->ui->statsPanel->AddStat(this->ui->powerUsageLabel, this->ui->powerUsageValueLabel);
+    this->ui->statsPanel->AddMeter(this->ui->dedicatedMemLabel, this->ui->dedicatedMemValueLabel);
+    this->ui->statsPanel->AddMeter(this->ui->sharedMemLabel, this->ui->sharedMemValueLabel);
+    this->ui->statsPanel->AddDetail(this->ui->gpuMemLabel, this->ui->gpuMemValueLabel);
+    this->ui->statsPanel->AddDetail(this->ui->driverLabel, this->ui->driverValueLabel);
+    this->ui->statsPanel->AddDetail(this->ui->backendLabel, this->ui->backendValueLabel);
+
+    this->ui->utilizationCard->SetHeader(this->ui->utilGraphLabel, this->ui->utilGraphMaxLabel);
+    this->ui->utilizationCard->SetTimeAxis(this->ui->utilTimeLeftLabel, this->ui->utilTimeRightLabel);
+    this->ui->dedicatedCard->SetHeader(this->ui->dedicatedMemGraphLabel, this->ui->dedicatedMemGraphMaxLabel);
+    this->ui->dedicatedCard->SetTimeAxis(this->ui->dedicatedTimeLeftLabel, this->ui->dedicatedTimeRightLabel);
+    this->ui->sharedCard->SetHeader(this->ui->sharedMemGraphLabel, this->ui->sharedMemGraphMaxLabel);
+    this->ui->sharedCard->SetTimeAxis(this->ui->sharedTimeLeftLabel, this->ui->sharedTimeRightLabel);
+    this->ui->copyCard->SetHeader(this->ui->copyBwGraphLabel, this->ui->copyBwGraphMaxLabel);
+    this->ui->copyCard->SetTimeAxis(this->ui->copyTimeLeftLabel, this->ui->copyTimeRightLabel);
+    this->ui->overviewLayout->setSpacing(UiMetrics::Space::L);
+    this->ui->memoryLayout->setSpacing(UiMetrics::Space::L);
+    // Utilization is the headline graph: it gets the most room in either overview arrangement.
+    this->ui->overviewLayout->setStretch(0, 2);
+    this->ui->overviewLayout->setStretch(1, 1);
+    this->ui->graphColumn->setStretchFactor(this->ui->overviewLayout, 3);
+    this->ui->graphColumn->setStretchFactor(this->ui->copyCard, 1);
+
+    this->setupPage({ this->ui->titleLabel, this->ui->modelLabel, this->ui->headerLayout, this->ui->bodyLayout, this->ui->statsPanel });
+
     auto configureGraph = [scheme](GraphWidget *graph)
     {
         graph->SetColor(scheme->GpuGraphLineColor, scheme->GpuGraphFillColor, scheme->GpuGraphSecondaryFillColor);
@@ -56,30 +89,37 @@ GpuDetailWidget::GpuDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::
         graph->SetValueFormat(GraphWidget::ValueFormat::Percent);
     };
 
-    auto *graphsGrid = new QGridLayout();
-    graphsGrid->setContentsMargins(0, 0, 0, 0);
-    graphsGrid->setHorizontalSpacing(6);
-    graphsGrid->setVerticalSpacing(6);
+    // Engine cards are laid out by relayoutEngineCards() so they can reflow with the page width
+    this->m_engineGrid = new QGridLayout(this->ui->engineAreaContainer);
+    this->m_engineGrid->setContentsMargins(0, 0, 0, 0);
+    this->m_engineGrid->setSpacing(UiMetrics::Space::L);
 
     for (int slot = 0; slot < 4; ++slot)
     {
-        auto *cell = new QVBoxLayout();
-        cell->setSpacing(2);
+        auto *card = new GraphCard(this->ui->engineAreaContainer);
+        auto *cell = new QVBoxLayout(card);
 
         auto *top = new QHBoxLayout();
-        auto *selector = new QComboBox(this);
-        auto *value = new QLabel("0%", this);
+        auto *selector = new QComboBox(card);
+        auto *value = new QLabel("0%", card);
         value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
         UIHelper::EnableCopyLabelContextMenu(value);
-        selector->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        top->addWidget(selector, 1);
+        // Sized to the engine name, but allowed to shrink so the grid can still reflow.
+        selector->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+        selector->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        selector->setMinimumWidth(selector->fontMetrics().averageCharWidth() * 8);
+        UIHelper::DisableWheelInput(selector);
+        top->addWidget(selector);
+        top->addStretch(1);
         top->addWidget(value);
 
-        auto *graph = new GraphWidget(this);
+        auto *graph = new GraphWidget(card);
         configureGraph(graph);
-        graph->setMinimumHeight(120);
+        graph->setMinimumHeight(UiMetrics::CompactGraphMinHeight);
+        graph->setMaximumHeight(UiMetrics::SecondaryGraphHeight);
         UIHelper::EnableGraphContextMenu(graph);
 
+        this->m_engineCards.append(card);
         this->m_engineSelectors.append(selector);
         this->m_engineValueLabels.append(value);
         this->m_engineGraphs.append(graph);
@@ -91,15 +131,12 @@ GpuDetailWidget::GpuDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::
 
         cell->addLayout(top);
         cell->addWidget(graph, 1);
-
-        QWidget *host = new QWidget(this);
-        host->setLayout(cell);
-        graphsGrid->addWidget(host, slot / 2, slot % 2);
     }
+    this->relayoutEngineCards(0);
 
-    auto *engineAreaLayout = new QVBoxLayout(this->ui->engineAreaContainer);
-    engineAreaLayout->setContentsMargins(0, 0, 0, 0);
-    engineAreaLayout->addLayout(graphsGrid);
+    configureGraph(this->ui->utilGraphWidget);
+    this->ui->utilGraphWidget->SetSeriesNames(tr("Utilization"));
+    UIHelper::EnableGraphContextMenu(this->ui->utilGraphWidget);
 
     configureGraph(this->ui->dedicatedMemGraphWidget);
     this->ui->dedicatedMemGraphWidget->SetSeriesNames(tr("Dedicated memory usage"));
@@ -112,21 +149,19 @@ GpuDetailWidget::GpuDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::
     configureGraph(this->ui->copyBwGraphWidget);
     this->ui->copyBwGraphWidget->SetSeriesNames(tr("TX"), tr("RX"));
     this->ui->copyBwGraphWidget->SetValueFormat(GraphWidget::ValueFormat::BytesPerSec);
-    this->ui->copyBwGraphWidget->setToolTip(tr("Copy bandwidth: light trace = TX, dark trace = RX"));
     UIHelper::EnableGraphContextMenu(this->ui->copyBwGraphWidget);
 
     UIHelper::EnableCopyLabelContextMenu(this->ui->utilValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->tempValueLabel);
-    UIHelper::EnableCopyLabelContextMenu(this->ui->gpuMemValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->dedicatedMemValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->sharedMemValueLabel);
+    UIHelper::EnableCopyLabelContextMenu(this->ui->gpuMemValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->driverValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->backendValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->coreClockValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->powerUsageValueLabel);
 
-    WidgetStyle::ApplyTextStyle(this->ui->titleLabel, scheme->GpuTitleColor, 18, true);
-    WidgetStyle::ApplyTextStyle(this->ui->copyBwLegendLabel, scheme->StatLabelColor);
+    this->applyStyle();
 }
 
 GpuDetailWidget::~GpuDetailWidget()
@@ -153,8 +188,7 @@ void GpuDetailWidget::SetGpu(int index)
 void GpuDetailWidget::ApplyColorScheme()
 {
     const ColorScheme *scheme = ColorScheme::GetCurrent();
-    WidgetStyle::ApplyTextStyle(this->ui->titleLabel, scheme->GpuTitleColor, 18, true);
-    WidgetStyle::ApplyTextStyle(this->ui->copyBwLegendLabel, scheme->StatLabelColor);
+    this->applyStyle();
 
     auto applyGraph = [scheme](GraphWidget *graph)
     {
@@ -164,10 +198,51 @@ void GpuDetailWidget::ApplyColorScheme()
 
     for (GraphWidget *graph : this->m_engineGraphs)
         applyGraph(graph);
+    applyGraph(this->ui->utilGraphWidget);
     applyGraph(this->ui->dedicatedMemGraphWidget);
     applyGraph(this->ui->sharedMemGraphWidget);
     applyGraph(this->ui->copyBwGraphWidget);
-    this->update();
+}
+
+void GpuDetailWidget::applyStyle()
+{
+    const ColorScheme *scheme = ColorScheme::GetCurrent();
+    this->applyPageStyle(scheme->GpuTitleColor);
+    for (QLabel *value : std::as_const(this->m_engineValueLabels))
+        WidgetStyle::ApplyTextStyle(value, QColor(), UiMetrics::TextRole::Heading);
+
+    // TX keeps the GPU color, RX is drawn as its own line, pulled towards the text color so it
+    // stays distinct in both light and dark themes.
+    const QColor txColor = scheme->GpuGraphLineColor;
+    const QColor rxColor = UiMetrics::Mix(txColor, this->palette().color(QPalette::WindowText), 0.45);
+    this->ui->copyBwGraphWidget->SetOverlayLineColor(rxColor);
+    this->ui->copyCard->SetLegend({ { tr("TX"), txColor }, { tr("RX"), rxColor } });
+}
+
+void GpuDetailWidget::layoutWidthChanged(int graphColumnWidth)
+{
+    // Utilization beside the memory graphs on wide pages, otherwise utilization on top and the
+    // two memory graphs side by side under it.
+    const bool row = graphColumnWidth >= kOverviewRowMinWidth;
+    this->ui->overviewLayout->setDirection(row ? QBoxLayout::LeftToRight : QBoxLayout::TopToBottom);
+    this->ui->memoryLayout->setDirection(row ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+    this->relayoutEngineCards(graphColumnWidth);
+}
+
+void GpuDetailWidget::relayoutEngineCards(int graphColumnWidth)
+{
+    // Four engines side by side when there is room for readable graphs, otherwise a 2x2 grid.
+    const int columns = (graphColumnWidth >= 4 * kMinEngineCardWidth) ? 4 : 2;
+    if (columns == this->m_engineColumns)
+        return;
+    this->m_engineColumns = columns;
+
+    while (this->m_engineGrid->count() > 0)
+        delete this->m_engineGrid->takeAt(0);
+    for (int column = 0; column < 4; ++column)
+        this->m_engineGrid->setColumnStretch(column, column < columns ? 1 : 0);
+    for (int slot = 0; slot < this->m_engineCards.size(); ++slot)
+        this->m_engineGrid->addWidget(this->m_engineCards.at(slot), slot / columns, slot % columns);
 }
 
 void GpuDetailWidget::onEngineSelectionChanged(int slot, int comboIndex)
@@ -240,7 +315,7 @@ void GpuDetailWidget::onUpdated()
     const qint64 gpuTotalMiB = dedicatedTotalMiB + sharedTotalMiB;
 
     this->ui->utilValueLabel->setText(QString::number(util, 'f', 0) + "%");
-    this->ui->tempValueLabel->setText(tempC >= 0 ? tr("%1 C").arg(tempC) : tr("—"));
+    this->ui->tempValueLabel->setText(tempC >= 0 ? tr("%1 °C").arg(tempC) : tr("—"));
     this->ui->gpuMemValueLabel->setText(tr("%1 / %2")
                                         .arg(Misc::FormatMiB(static_cast<quint64>(qMax<qint64>(0, gpuUsedMiB)), 1))
                                         .arg(Misc::FormatMiB(static_cast<quint64>(qMax<qint64>(0, gpuTotalMiB)), 1)));
@@ -252,13 +327,11 @@ void GpuDetailWidget::onUpdated()
                                            .arg(Misc::FormatMiB(static_cast<quint64>(qMax<qint64>(0, sharedTotalMiB)), 1)));
     this->ui->driverValueLabel->setText(gpu.DriverVersion);
     this->ui->backendValueLabel->setText(gpu.Backend);
-    this->ui->coreClockLabel->setVisible(hasCoreClock);
-    this->ui->coreClockValueLabel->setVisible(hasCoreClock);
+    this->ui->statsPanel->SetEntryVisible(this->ui->coreClockValueLabel, hasCoreClock);
     if (hasCoreClock)
         this->ui->coreClockValueLabel->setText(tr("%1 MHz").arg(gpu.CoreClockMHz));
 
-    this->ui->powerUsageLabel->setVisible(hasPowerUsage);
-    this->ui->powerUsageValueLabel->setVisible(hasPowerUsage);
+    this->ui->statsPanel->SetEntryVisible(this->ui->powerUsageValueLabel, hasPowerUsage);
     if (hasPowerUsage)
         this->ui->powerUsageValueLabel->setText(tr("%1 W").arg(QString::number(gpu.PowerUsageW, 'f', 1)));
 
@@ -277,6 +350,13 @@ void GpuDetailWidget::onUpdated()
 
         graph->Tick();
     }
+
+    this->ui->statsPanel->SetMeterFraction(this->ui->dedicatedMemValueLabel,
+                                           dedicatedTotalMiB > 0 ? static_cast<double>(dedicatedUsedMiB) / static_cast<double>(dedicatedTotalMiB) : 0.0);
+    this->ui->statsPanel->SetMeterFraction(this->ui->sharedMemValueLabel,
+                                           sharedTotalMiB > 0 ? static_cast<double>(sharedUsedMiB) / static_cast<double>(sharedTotalMiB) : 0.0);
+
+    this->ui->utilGraphWidget->Tick();
 
     this->ui->dedicatedMemGraphWidget->SetPercentTooltipAbsolute(static_cast<double>(dedicatedTotalMiB) / 1024.0, tr("GB"), 2);
     this->ui->dedicatedMemGraphMaxLabel->setText(Misc::FormatMiB(static_cast<quint64>(qMax<qint64>(0, dedicatedTotalMiB)), 1));
@@ -335,6 +415,7 @@ void GpuDetailWidget::bindMemoryAndCopySources()
         return;
 
     const GPU::GPUInfo *gpu = &Metrics::GetGPU()->FromIndex(this->m_gpuIndex);
+    this->ui->utilGraphWidget->SetDataSource(gpu->UtilHistory, 100.0);
     this->ui->dedicatedMemGraphWidget->SetDataSource(gpu->MemUsageHistory, 100.0);
     this->ui->copyBwGraphWidget->SetDataSource(gpu->CopyTxHistory, 1024.0);
     this->ui->copyBwGraphWidget->SetOverlayDataSource(gpu->CopyRxHistory);

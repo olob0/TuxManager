@@ -20,9 +20,12 @@
 #define PERF_CPUDETAILWIDGET_H
 
 #include "cpugrapharea.h"
+#include "detailpage.h"
 
 #include <QMenu>
 #include <QWidget>
+
+class SegmentedControl;
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class CpuDetailWidget; }
@@ -30,7 +33,7 @@ QT_END_NAMESPACE
 
 namespace Perf
 {
-    class CpuDetailWidget : public QWidget
+    class CpuDetailWidget : public DetailPage
     {
         Q_OBJECT
 
@@ -46,8 +49,12 @@ namespace Perf
             void onContextMenuRequested(const QPoint &globalPos);
 
         private:
+            void applyStyle();
+            void setGraphMode(CpuGraphArea::GraphMode mode);
+
             Ui::CpuDetailWidget  *ui;
             CpuGraphArea         *m_graphArea  { nullptr };
+            SegmentedControl     *m_modeSwitch { nullptr };
     };
 } // namespace Perf
 

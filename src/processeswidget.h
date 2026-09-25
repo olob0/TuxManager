@@ -33,6 +33,8 @@
 #include <QTreeView>
 #include <QWidget>
 
+class SegmentedControl;
+
 #include <functional>
 
 QT_BEGIN_NAMESPACE
@@ -76,6 +78,7 @@ class ProcessesWidget : public QWidget
         QTimer                   *m_refreshTimer;
         OS::ProcessRefreshService *m_processRefreshService { nullptr };
         QTreeView                *m_treeView { nullptr };
+        SegmentedControl         *m_viewModeSwitch { nullptr };
         bool                      m_active { false };
         bool                      m_tableContextMenuOpen { false };
         bool                      m_treeViewMode { false };
@@ -89,6 +92,7 @@ class ProcessesWidget : public QWidget
 
         void setupTable();
         void startRefresh();
+        void setupToolbar();
         void setTreeViewMode(bool enabled);
         void showHeaderContextMenu(QHeaderView *header, int columnCount, const std::function<QString(int)> &titleForColumn, const QPoint &pos);
         void saveTableHeaderState() const;

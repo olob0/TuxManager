@@ -17,6 +17,7 @@
  */
 
 #include "colorscheme.h"
+#include "ui/uimetrics.h"
 
 #include <QApplication>
 #include <QPalette>
@@ -52,17 +53,13 @@ namespace
         { "GraphGridColor", &ColorScheme::GraphGridColor },
         { "GraphOverlayTextColor", &ColorScheme::GraphOverlayTextColor },
         { "SidePanelBackgroundColor", &ColorScheme::SidePanelBackgroundColor },
-        { "SidePanelItemSelectedBackgroundColor", &ColorScheme::SidePanelItemSelectedBackgroundColor },
         { "SidePanelItemHoverBackgroundColor", &ColorScheme::SidePanelItemHoverBackgroundColor },
-        { "SidePanelItemBackgroundColor", &ColorScheme::SidePanelItemBackgroundColor },
         { "SidePanelItemSelectedTextColor", &ColorScheme::SidePanelItemSelectedTextColor },
         { "SidePanelItemTextColor", &ColorScheme::SidePanelItemTextColor },
         { "SidePanelItemSubtitleColor", &ColorScheme::SidePanelItemSubtitleColor },
-        { "SidePanelItemSelectedBorderColor", &ColorScheme::SidePanelItemSelectedBorderColor },
         { "CpuTitleColor", &ColorScheme::CpuTitleColor },
         { "CpuHeaderValueColor", &ColorScheme::CpuHeaderValueColor },
         { "MemoryTitleColor", &ColorScheme::MemoryTitleColor },
-        { "MemoryHeaderValueColor", &ColorScheme::MemoryHeaderValueColor },
         { "DiskTitleColor", &ColorScheme::DiskTitleColor },
         { "DiskHeaderValueColor", &ColorScheme::DiskHeaderValueColor },
         { "NetworkTitleColor", &ColorScheme::NetworkTitleColor },
@@ -138,10 +135,24 @@ void ColorScheme::Install(ColorScheme *scheme)
 ColorScheme::ColorScheme()
 {}
 
+void ColorScheme::applyPaletteNeutrals()
+{
+    const QPalette palette = QApplication::palette();
+    this->SidePanelBackgroundColor = palette.color(QPalette::Base);
+    this->SidePanelItemHoverBackgroundColor = UiMetrics::WithAlpha(palette.color(QPalette::WindowText), 18);
+    this->SidePanelItemSelectedTextColor = palette.color(QPalette::WindowText);
+    this->SidePanelItemTextColor = palette.color(QPalette::WindowText);
+    this->SidePanelItemSubtitleColor = UiMetrics::SecondaryTextColor(palette);
+    this->MutedTextColor = UiMetrics::SecondaryTextColor(palette);
+    this->StatLabelColor = UiMetrics::SecondaryTextColor(palette);
+    this->AxisLabelColor = UiMetrics::TertiaryTextColor(palette);
+}
+
 ColorScheme ColorScheme::DefaultDark()
 {
     ColorScheme scheme;
     scheme.DarkMode = true;
+    scheme.applyPaletteNeutrals();
 
     scheme.CpuGraphLineColor = QColor(0x00, 0xbc, 0xff);              // bright cyan
     scheme.CpuGraphFillColor = QColor(0x00, 0x4c, 0x8a, 120);         // dark blue, semi-transparent
@@ -164,27 +175,15 @@ ColorScheme ColorScheme::DefaultDark()
     scheme.SwapActivityGraphLineColor = QColor(0xcc, 0xaa, 0x66);      // tan/gold
     scheme.SwapActivityGraphFillColor = QColor(0x66, 0x44, 0x22, 100); // dark tan, semi-transparent
     scheme.SwapActivityGraphSecondaryFillColor = QColor(0x4a, 0x2d, 0x14, 120); // very dark brown, semi-transparent
-    scheme.GraphGridColor = QColor(0x88, 0x88, 0x99, 150);             // grey-blue, semi-transparent
+    scheme.GraphGridColor = QColor(0x88, 0x88, 0x99, 70);              // grey-blue, faint
     scheme.GraphOverlayTextColor = QColor(245, 245, 245, 220);         // near white, semi-transparent
-    scheme.SidePanelBackgroundColor = QColor(0x12, 0x12, 0x1a);        // very dark navy
-    scheme.SidePanelItemSelectedBackgroundColor = QColor(0x1a, 0x4a, 0x8a, 200); // dark blue, semi-transparent
-    scheme.SidePanelItemHoverBackgroundColor = QColor(0x30, 0x30, 0x40, 120);    // dark grey-blue, semi-transparent
-    scheme.SidePanelItemBackgroundColor = QColor(0x1a, 0x1a, 0x22, 180);         // very dark grey, semi-transparent
-    scheme.SidePanelItemSelectedTextColor = QColor(0xff, 0xff, 0xff);   // white
-    scheme.SidePanelItemTextColor = QColor(0xcc, 0xcc, 0xcc);           // light grey
-    scheme.SidePanelItemSubtitleColor = QColor(0x88, 0xaa, 0xcc);       // steel blue
-    scheme.SidePanelItemSelectedBorderColor = QColor(0x44, 0x88, 0xff); // bright blue
     scheme.CpuTitleColor = scheme.CpuGraphLineColor;
     scheme.CpuHeaderValueColor = QColor(0xaa, 0xcc, 0xff);              // pale blue
     scheme.MemoryTitleColor = scheme.MemoryGraphLineColor;
-    scheme.MemoryHeaderValueColor = QColor(0xdd, 0xaa, 0xdd);           // pale violet
     scheme.DiskTitleColor = scheme.DiskGraphLineColor;
     scheme.DiskHeaderValueColor = QColor(0xaa, 0xdd, 0xaa);             // pale green
     scheme.NetworkTitleColor = scheme.NetworkGraphLineColor;
     scheme.GpuTitleColor = scheme.GpuGraphLineColor;
-    scheme.MutedTextColor = QColor(0xaa, 0xaa, 0xaa);                   // medium grey
-    scheme.StatLabelColor = QColor(0x88, 0x88, 0x88);                   // grey
-    scheme.AxisLabelColor = QColor(0x66, 0x66, 0x66);                   // dark grey
     scheme.MemoryLegendTextColor = QColor(0xaa, 0xaa, 0xaa);            // medium grey
     scheme.MemoryLegendUsedColor = scheme.MemoryGraphLineColor;
     scheme.MemoryLegendCompressedColor = QColor(0xaa, 0x66, 0xaa);      // muted purple
@@ -204,6 +203,7 @@ ColorScheme ColorScheme::DefaultLight()
 {
     ColorScheme scheme;
     scheme.DarkMode = false;
+    scheme.applyPaletteNeutrals();
 
     scheme.CpuGraphLineColor = QColor(0x00, 0x8f, 0xcc);              // medium blue
     scheme.CpuGraphFillColor = QColor(0x99, 0xd9, 0xff, 120);         // pale sky blue, semi-transparent
@@ -226,27 +226,15 @@ ColorScheme ColorScheme::DefaultLight()
     scheme.SwapActivityGraphLineColor = QColor(0xb3, 0x8d, 0x4b);      // golden tan
     scheme.SwapActivityGraphFillColor = QColor(0xe8, 0xd8, 0xb8, 110); // pale gold, semi-transparent
     scheme.SwapActivityGraphSecondaryFillColor = QColor(0xd5, 0xb8, 0x88, 125); // light gold, semi-transparent
-    scheme.GraphGridColor = QColor(0x80, 0x80, 0x80, 72);              // grey, semi-transparent
+    scheme.GraphGridColor = QColor(0x80, 0x80, 0x80, 48);              // grey, faint
     scheme.GraphOverlayTextColor = QColor(35, 35, 35, 220);            // near black, semi-transparent
-    scheme.SidePanelBackgroundColor = QColor(0xf3, 0xf5, 0xf8);        // very light grey-blue
-    scheme.SidePanelItemSelectedBackgroundColor = QColor(0x66, 0xa8, 0xff, 96); // medium blue, semi-transparent
-    scheme.SidePanelItemHoverBackgroundColor = QColor(0x00, 0x00, 0x00, 20);    // black, nearly transparent
-    scheme.SidePanelItemBackgroundColor = QColor(0xff, 0xff, 0xff);     // white
-    scheme.SidePanelItemSelectedTextColor = QColor(0x12, 0x24, 0x36);   // very dark navy
-    scheme.SidePanelItemTextColor = QColor(0x24, 0x24, 0x24);           // very dark grey
-    scheme.SidePanelItemSubtitleColor = QColor(0x5e, 0x7a, 0x96);       // steel blue-grey
-    scheme.SidePanelItemSelectedBorderColor = QColor(0x44, 0x88, 0xff); // bright blue
     scheme.CpuTitleColor = scheme.CpuGraphLineColor;
     scheme.CpuHeaderValueColor = QColor(0x5d, 0x84, 0xaa);              // steel blue
     scheme.MemoryTitleColor = scheme.MemoryGraphLineColor;
-    scheme.MemoryHeaderValueColor = QColor(0xb5, 0x7f, 0xb5);           // muted purple
     scheme.DiskTitleColor = scheme.DiskGraphLineColor;
     scheme.DiskHeaderValueColor = QColor(0x74, 0xa5, 0x5d);             // medium green
     scheme.NetworkTitleColor = scheme.NetworkGraphLineColor;
     scheme.GpuTitleColor = scheme.GpuGraphLineColor;
-    scheme.MutedTextColor = QColor(0x77, 0x77, 0x77);                   // medium grey
-    scheme.StatLabelColor = QColor(0x7a, 0x7a, 0x7a);                   // medium grey
-    scheme.AxisLabelColor = QColor(0x6d, 0x6d, 0x6d);                   // dark grey
     scheme.MemoryLegendTextColor = QColor(0x77, 0x77, 0x77);            // medium grey
     scheme.MemoryLegendUsedColor = scheme.MemoryGraphLineColor;
     scheme.MemoryLegendCompressedColor = QColor(0xb4, 0x73, 0xb4);      // medium purple

@@ -19,6 +19,7 @@
 #ifndef PERF_DISKDETAILWIDGET_H
 #define PERF_DISKDETAILWIDGET_H
 
+#include "detailpage.h"
 #include "historybuffer.h"
 
 #include <QWidget>
@@ -29,7 +30,7 @@ QT_END_NAMESPACE
 
 namespace Perf
 {
-    class DiskDetailWidget : public QWidget
+    class DiskDetailWidget : public DetailPage
     {
         Q_OBJECT
 
@@ -44,6 +45,8 @@ namespace Perf
             void onUpdated();
 
         private:
+            void applyStyle();
+
             Ui::DiskDetailWidget *ui;
             int                   m_diskIndex { -1 };
     };

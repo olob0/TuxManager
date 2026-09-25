@@ -82,11 +82,12 @@ class PerformanceWidget : public QWidget
 
         void setupLayout();
         void setupSidePanel();
+        //! Adds item to the side panel and its detail page (in a DetailScrollArea) to the stack.
+        void addItemWithDetail(Perf::SidePanelItem *item, Perf::DetailPage *detail);
         void setupDiskPanels();
         void setupNetworkPanels();
         void setupGpuPanels();
         void applySidePanelOrder();
-        void tagTimeAxisLabels();
         void applyPanelVisibility();
         void applySidePanelGridEnabled();
         void updateSamplingPolicy();

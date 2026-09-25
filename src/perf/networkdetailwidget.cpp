@@ -24,40 +24,30 @@
 #include "../configuration.h"
 #include "../misc.h"
 #include "../ui/uihelper.h"
-#include "../ui/widgetstyle.h"
 
 #include <QAction>
-#include <QGridLayout>
 #include <QLabel>
 #include <QMenu>
 
 using namespace Perf;
 
-NetworkDetailWidget::NetworkDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::NetworkDetailWidget)
+NetworkDetailWidget::NetworkDetailWidget(QWidget *parent) : DetailPage(parent), ui(new Ui::NetworkDetailWidget)
 {
     this->ui->setupUi(this);
     const ColorScheme *scheme = ColorScheme::GetCurrent();
 
-    WidgetStyle::ApplyTextStyle(this->ui->titleLabel, scheme->NetworkTitleColor, 18, true);
-    WidgetStyle::ApplyTextStyle(this->ui->throughputGraphMaxLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->throughputLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->timeLeftLabel, scheme->AxisLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->timeRightLabel, scheme->AxisLabelColor, 8);
+    this->ui->statsPanel->AddStat(this->ui->sendLabel, this->ui->sendValueLabel);
+    this->ui->statsPanel->AddStat(this->ui->receiveLabel, this->ui->receiveValueLabel);
+    this->ui->statsPanel->AddDetail(this->ui->adapterLabel, this->ui->adapterValueLabel);
+    this->ui->statsPanel->AddDetail(this->ui->typeLabel, this->ui->typeValueLabel);
+    this->ui->statsPanel->AddDetail(this->ui->speedLabel, this->ui->speedValueLabel);
+    this->ui->statsPanel->AddDetail(this->ui->ipv4Label, this->ui->ipv4ValueLabel);
+    this->ui->statsPanel->AddDetail(this->ui->ipv6Label, this->ui->ipv6ValueLabel);
 
-    if (QGridLayout *statsGrid = this->findChild<QGridLayout *>("statsGrid"))
-    {
-        for (int row = 0; row < statsGrid->rowCount(); ++row)
-        {
-            for (int column = 0; column < statsGrid->columnCount(); column += 2)
-            {
-                if (QLayoutItem *item = statsGrid->itemAtPosition(row, column))
-                {
-                    if (QLabel *label = qobject_cast<QLabel *>(item->widget()))
-                        WidgetStyle::ApplyTextStyle(label, scheme->StatLabelColor);
-                }
-            }
-        }
-    }
+    this->ui->throughputCard->SetHeader(this->ui->throughputLabel, this->ui->throughputGraphMaxLabel);
+    this->ui->throughputCard->SetTimeAxis(this->ui->timeLeftLabel, this->ui->timeRightLabel);
+
+    this->setupPage({ this->ui->titleLabel, this->ui->subtitleLabel, this->ui->headerLayout, this->ui->bodyLayout, this->ui->statsPanel });
 
     this->ui->throughputGraphWidget->SetColor(scheme->NetworkGraphLineColor, scheme->NetworkGraphFillColor, scheme->NetworkGraphSecondaryFillColor);
     this->ui->throughputGraphWidget->SetSampleCapacity(TUX_MANAGER_HISTORY_SIZE);
@@ -74,6 +64,8 @@ NetworkDetailWidget::NetworkDetailWidget(QWidget *parent) : QWidget(parent), ui(
     UIHelper::EnableCopyLabelContextMenu(this->ui->speedValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->ipv4ValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->ipv6ValueLabel);
+
+    this->applyStyle();
 }
 
 NetworkDetailWidget::~NetworkDetailWidget()
@@ -84,29 +76,13 @@ NetworkDetailWidget::~NetworkDetailWidget()
 void NetworkDetailWidget::ApplyColorScheme()
 {
     const ColorScheme *scheme = ColorScheme::GetCurrent();
-    WidgetStyle::ApplyTextStyle(this->ui->titleLabel, scheme->NetworkTitleColor, 18, true);
-    WidgetStyle::ApplyTextStyle(this->ui->throughputGraphMaxLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->throughputLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->timeLeftLabel, scheme->AxisLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->timeRightLabel, scheme->AxisLabelColor, 8);
-
-    if (QGridLayout *statsGrid = this->findChild<QGridLayout *>("statsGrid"))
-    {
-        for (int row = 0; row < statsGrid->rowCount(); ++row)
-        {
-            for (int column = 0; column < statsGrid->columnCount(); column += 2)
-            {
-                if (QLayoutItem *item = statsGrid->itemAtPosition(row, column))
-                {
-                    if (QLabel *label = qobject_cast<QLabel *>(item->widget()))
-                        WidgetStyle::ApplyTextStyle(label, scheme->StatLabelColor);
-                }
-            }
-        }
-    }
-
+    this->applyStyle();
     this->ui->throughputGraphWidget->SetColor(scheme->NetworkGraphLineColor, scheme->NetworkGraphFillColor, scheme->NetworkGraphSecondaryFillColor);
-    this->update();
+}
+
+void NetworkDetailWidget::applyStyle()
+{
+    this->applyPageStyle(ColorScheme::GetCurrent()->NetworkTitleColor);
 }
 
 void NetworkDetailWidget::applyTransferUnitMode()
@@ -135,6 +111,13 @@ void NetworkDetailWidget::SetNetwork(int index)
         this->ui->adapterValueLabel->setText(network.Name);
         this->ui->typeValueLabel->setText(network.Type);
         this->ui->speedValueLabel->setText(network.LinkSpeedMbps > 0 ? QString::number(network.LinkSpeedMbps) + tr(" Mbps") : tr("Unknown"));
+
+        QStringList description;
+        if (!network.Type.isEmpty())
+            description << network.Type;
+        if (network.LinkSpeedMbps > 0)
+            description << this->ui->speedValueLabel->text();
+        this->ui->subtitleLabel->setText(description.join(QStringLiteral(" · ")));
         this->ui->ipv4ValueLabel->setText(network.IPv4.isEmpty() ? tr("—") : network.IPv4);
         this->ui->ipv6ValueLabel->setText(network.IPv6.isEmpty() ? tr("—") : network.IPv6.join('\n'));
 

@@ -24,6 +24,7 @@
 #include "ui/uihelper.h"
 
 #include <QClipboard>
+#include <QHash>
 #include <QHeaderView>
 #include <QGuiApplication>
 #include <QMenu>
@@ -60,6 +61,8 @@ ServicesWidget::ServicesWidget(QWidget *parent)
     this->m_proxy->setSourceModel(this->m_model);
     connect(this->ui->searchEdit, &QLineEdit::textChanged, this->m_proxy, &OS::ServiceFilterProxy::setFilterFixedString);
 
+    UIHelper::ApplyTabChrome(this, this->ui->toolbarLayout, this->ui->searchEdit, this->ui->statusLabel);
+    UIHelper::ApplyItemViewStyle(this->ui->tableView);
     this->ui->tableView->setModel(this->m_proxy);
     this->ui->tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     this->ui->tableView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -79,14 +82,16 @@ ServicesWidget::ServicesWidget(QWidget *parent)
     hv->setMinimumSectionSize(60);
     connect(hv, &QHeaderView::sectionMoved, this, [this]() { this->saveHeaderState(); });
     connect(hv, &QHeaderView::sectionResized, this, [this]() { this->saveHeaderState(); });
-    this->ui->tableView->setColumnWidth(0, 260);
-    this->ui->tableView->setColumnWidth(1, 90);
-    this->ui->tableView->setColumnWidth(2, 90);
-    this->ui->tableView->setColumnWidth(3, 100);
+    // Default column widths, in characters so they follow the font
+    const QHash<int, int> columnChars = { { 0, 30 }, { 1, 9 }, { 2, 9 }, { 3, 11 } };
+    UIHelper::SizeColumnsInChars(hv, columnChars);
     this->ui->tableView->setSortingEnabled(true);
     this->ui->tableView->sortByColumn(0, Qt::AscendingOrder);
     if (!CFG->ServicesHeaderState.isEmpty())
+    {
         hv->restoreState(CFG->ServicesHeaderState);
+        UIHelper::SizeColumnsInChars(hv, columnChars, true);
+    }
     this->m_headerPersistenceEnabled = true;
 
     connect(hv, &QHeaderView::customContextMenuRequested, this, &ServicesWidget::onHeaderContextMenu);

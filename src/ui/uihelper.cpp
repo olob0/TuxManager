@@ -22,19 +22,187 @@
 #include "../metrics.h"
 #include "../misc.h"
 #include "../performancewidget.h"
+#include "uimetrics.h"
+#include "widgetstyle.h"
 
 #include <QAbstractItemModel>
+#include <QHash>
 #include <QAction>
 #include <QHeaderView>
 #include <QItemSelectionModel>
+#include <QBoxLayout>
+#include <QIcon>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QStringList>
 #include <QScrollBar>
+#include <QProxyStyle>
+#include <QStyleFactory>
+#include <QStyleOptionHeader>
 #include <QTableView>
+#include <QTreeView>
 #include <QTimer>
 #include <QApplication>
 #include <QClipboard>
+#include <QEvent>
+
+namespace
+{
+    constexpr int kHeaderExtraPadding = UiMetrics::Space::S;
+
+    //! Adds horizontal padding around item text and a comfortable minimum row height,
+    //! on top of whatever the platform style (Breeze, Fusion, ...) draws.
+    class ItemViewPaddingStyle : public QProxyStyle
+    {
+        public:
+            //! Wraps a fresh instance of the application's current style (a default-constructed
+            //! QProxyStyle would fall back to the platform default style instead).
+            ItemViewPaddingStyle() : QProxyStyle(QStyleFactory::create(QApplication::style()->name()))
+            {}
+
+            QRect subElementRect(SubElement element, const QStyleOption *option, const QWidget *widget) const override
+            {
+                QRect rect = QProxyStyle::subElementRect(element, option, widget);
+                if (element == SE_ItemViewItemText)
+                    rect.adjust(UiMetrics::Space::M, 0, -UiMetrics::Space::M, 0);
+                return rect;
+            }
+
+            void drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const override
+            {
+                // Styles inset header titles by only a few pixels; top it up so titles start where
+                // the cell text under them starts.
+                if (element == CE_HeaderLabel)
+                {
+                    if (const auto *header = qstyleoption_cast<const QStyleOptionHeader *>(option))
+                    {
+                        QStyleOptionHeader padded(*header);
+                        padded.rect.adjust(kHeaderExtraPadding, 0, -kHeaderExtraPadding, 0);
+                        QProxyStyle::drawControl(element, &padded, painter, widget);
+                        return;
+                    }
+                }
+                QProxyStyle::drawControl(element, option, painter, widget);
+            }
+
+            QSize sizeFromContents(ContentsType type, const QStyleOption *option, const QSize &size, const QWidget *widget) const override
+            {
+                QSize result = QProxyStyle::sizeFromContents(type, option, size, widget);
+                if (type == CT_ItemViewItem && option)
+                {
+                    result.rwidth() += 2 * UiMetrics::Space::M;
+                    result.setHeight(qMax(result.height(), UiMetrics::RowHeight(option->fontMetrics)));
+                } else if (type == CT_HeaderSection)
+                {
+                    result.rwidth() += 2 * kHeaderExtraPadding;
+                }
+                return result;
+            }
+    };
+
+    //! Swallows wheel events for the widget and lets them bubble up to its parent instead.
+    class WheelPassThroughFilter : public QObject
+    {
+        public:
+            using QObject::QObject;
+
+        protected:
+            bool eventFilter(QObject *watched, QEvent *event) override
+            {
+                if (event->type() == QEvent::Wheel)
+                {
+                    // Ignored and filtered: the widget never sees it and the event is propagated
+                    // to the parent, so the page scrolls.
+                    event->ignore();
+                    return true;
+                }
+                return QObject::eventFilter(watched, event);
+            }
+    };
+}
+
+void UIHelper::DisableWheelInput(QWidget *widget)
+{
+    if (!widget)
+        return;
+    static WheelPassThroughFilter *filter = new WheelPassThroughFilter(qApp);
+    widget->installEventFilter(filter);
+}
+
+void UIHelper::ApplyItemViewStyle(QAbstractItemView *view)
+{
+    if (!view)
+        return;
+
+    auto *style = new ItemViewPaddingStyle();
+    style->setParent(view);
+    view->setStyle(style);
+
+    QHeaderView *header = nullptr;
+    if (QTableView *table = qobject_cast<QTableView *>(view))
+    {
+        table->setShowGrid(false);
+        table->verticalHeader()->setDefaultSectionSize(UiMetrics::RowHeight(table->fontMetrics()));
+        table->verticalHeader()->setMinimumSectionSize(table->fontMetrics().height());
+        header = table->horizontalHeader();
+    } else if (QTreeView *tree = qobject_cast<QTreeView *>(view))
+    {
+        header = tree->header();
+    }
+
+    if (header)
+    {
+        header->setStyle(style);
+        // Columns without an explicit alignment in the model read left-aligned, like their cells.
+        header->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        header->setHighlightSections(false);
+    }
+}
+
+void UIHelper::ApplyTabChrome(QWidget *tab, QBoxLayout *toolbar, QLineEdit *search, QLabel *status)
+{
+    if (tab && tab->layout())
+    {
+        tab->layout()->setContentsMargins(0, 0, 0, 0);
+        tab->layout()->setSpacing(0);
+    }
+    if (toolbar)
+    {
+        toolbar->setContentsMargins(UiMetrics::Space::L, UiMetrics::Space::M, UiMetrics::Space::L, UiMetrics::Space::M);
+        toolbar->setSpacing(UiMetrics::Space::S);
+    }
+    if (search)
+    {
+        search->addAction(QIcon::fromTheme("edit-find"), QLineEdit::LeadingPosition);
+        search->setClearButtonEnabled(true);
+        search->setMaximumWidth(QWIDGETSIZE_MAX);
+        search->setMinimumWidth(search->fontMetrics().averageCharWidth() * 36);
+    }
+    if (status)
+    {
+        status->setContentsMargins(UiMetrics::Space::L, UiMetrics::Space::S, UiMetrics::Space::L, UiMetrics::Space::S);
+        WidgetStyle::ApplyTextStyle(status, UiMetrics::SecondaryTextColor(status->palette()), UiMetrics::TextRole::Caption);
+    }
+}
+
+void UIHelper::SizeColumnsInChars(QHeaderView *header, const QHash<int, int> &charsByColumn, bool growOnly)
+{
+    if (!header || !header->model())
+        return;
+
+    const QFontMetrics fm = header->fontMetrics();
+    const int sortIndicator = fm.height();
+    for (auto it = charsByColumn.cbegin(); it != charsByColumn.cend(); ++it)
+    {
+        const int column = it.key();
+        const QString title = header->model()->headerData(column, header->orientation(), Qt::DisplayRole).toString();
+        const int content = qMax(fm.averageCharWidth() * it.value(), fm.horizontalAdvance(title) + sortIndicator);
+        const int width = content + 2 * UiMetrics::Space::M;
+        if (!growOnly || header->sectionSize(column) < width)
+            header->resizeSection(column, width);
+    }
+}
 
 QString UIHelper::GetVisibleRowText(const QTableView *view, int row)
 {

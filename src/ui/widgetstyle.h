@@ -19,15 +19,18 @@
 #ifndef WIDGETSTYLE_H
 #define WIDGETSTYLE_H
 
+#include "uimetrics.h"
+
 #include <QColor>
 
 class QWidget;
 
-// Helper that creates a style string from input values, so that we don't need to use regex hacks or string manipulation
+// Helper that creates a style string from input values, so that we don't need to use regex hacks or string manipulation.
+// Sizes come from UiMetrics text roles; pass an invalid QColor to keep the palette's text color.
 namespace WidgetStyle
 {
-    QString TextStyle(const QColor &color, int fontSizePt = -1, bool bold = false);
-    void ApplyTextStyle(QWidget *widget, const QColor &color, int fontSizePt = -1, bool bold = false);
+    QString TextStyle(const QColor &color, UiMetrics::TextRole role = UiMetrics::TextRole::Body);
+    void ApplyTextStyle(QWidget *widget, const QColor &color, UiMetrics::TextRole role = UiMetrics::TextRole::Body);
 }
 
 #endif // WIDGETSTYLE_H

@@ -20,6 +20,7 @@
 #include "../configuration.h"
 #include "../colorscheme.h"
 #include "globals.h"
+#include "../ui/uimetrics.h"
 
 #include <QPainter>
 #include <QPaintEvent>
@@ -34,11 +35,11 @@ SidePanelItem::SidePanelItem(const QString &title, QWidget *parent) : QWidget(pa
 {
     this->setCursor(Qt::PointingHandCursor);
     this->setMouseTracking(true);
+    this->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    // Layout: the graph fills most of the cell; title/subtitle are painted
+    // Layout: the graph fills the bottom of the cell; the text rows are painted
     // directly in paintEvent to avoid font layout overhead.
     QVBoxLayout *lay = new QVBoxLayout(this);
-    lay->setContentsMargins(2, 22, 2, 2);   // leave room for title text
     lay->setSpacing(0);
     this->m_graph->SetSampleCapacity(TUX_MANAGER_HISTORY_SIZE);
     this->m_graph->SetGridEnabled(CFG->SidePanelGridEnabled);
@@ -46,6 +47,7 @@ SidePanelItem::SidePanelItem(const QString &title, QWidget *parent) : QWidget(pa
     this->m_graph->SetHoverTooltipEnabled(false);
     lay->addWidget(this->m_graph);
     this->setLayout(lay);
+    this->updateMargins();
 }
 
 void SidePanelItem::SetGraphSource(const HistoryBuffer &history, double maxVal)
@@ -53,9 +55,10 @@ void SidePanelItem::SetGraphSource(const HistoryBuffer &history, double maxVal)
     this->m_graph->SetDataSource(history, maxVal);
 }
 
-void SidePanelItem::Update(const QString &subtitle, double maxVal)
+void SidePanelItem::Update(const QString &value, const QString &detail, double maxVal)
 {
-    this->m_subtitle = subtitle;
+    this->m_value = value;
+    this->m_detail = detail;
     this->m_graph->SetMax(maxVal);
     this->m_graph->Tick();
     this->update();
@@ -71,12 +74,51 @@ void SidePanelItem::SetSelected(bool selected)
 
 void SidePanelItem::SetGraphColor(QColor line, QColor fill)
 {
+    this->m_accent = line;
     this->m_graph->SetColor(line, fill);
+    this->update();
 }
 
 void SidePanelItem::SetGraphGridEnabled(bool enabled)
 {
     this->m_graph->SetGridEnabled(enabled);
+}
+
+// ── Geometry ──────────────────────────────────────────────────────────────────
+
+int SidePanelItem::textBlockHeight() const
+{
+    const QFontMetrics strongFm(UiMetrics::Font(UiMetrics::TextRole::Strong, this->font()));
+    const QFontMetrics captionFm(UiMetrics::Font(UiMetrics::TextRole::Caption, this->font()));
+    return strongFm.height() + UiMetrics::Space::XXS + captionFm.height() + UiMetrics::Space::S;
+}
+
+int SidePanelItem::graphHeight() const
+{
+    // Scales with the font so the thumbnail keeps its proportions on HiDPI / large fonts.
+    const QFontMetrics captionFm(UiMetrics::Font(UiMetrics::TextRole::Caption, this->font()));
+    return qMax(56, captionFm.height() * 4);
+}
+
+void SidePanelItem::updateMargins()
+{
+    if (!this->layout())
+        return;
+    const int pad = UiMetrics::Space::S;
+    this->layout()->setContentsMargins(pad, pad + this->textBlockHeight(), pad, pad);
+    this->m_graph->setFixedHeight(this->graphHeight());
+    this->updateGeometry();
+}
+
+QSize SidePanelItem::sizeHint() const
+{
+    const int pad = UiMetrics::Space::S;
+    return QSize(200, pad + this->textBlockHeight() + this->graphHeight() + pad);
+}
+
+QSize SidePanelItem::minimumSizeHint() const
+{
+    return QSize(120, this->sizeHint().height());
 }
 
 // ── Paint ─────────────────────────────────────────────────────────────────────
@@ -86,68 +128,57 @@ void SidePanelItem::paintEvent(QPaintEvent *event)
     QWidget::paintEvent(event);   // draw children (the graph widget)
 
     QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing, true);
     const ColorScheme *scheme = ColorScheme::GetCurrent();
+    const QRectF r = QRectF(this->rect()).adjusted(0.5, 0.5, -0.5, -0.5);
 
-    const QRect r = this->rect();
-
-    // Background
-    QColor bg;
+    // Background: selected items take a tint of their own resource color.
     if (this->m_selected)
     {
-        bg = scheme->SidePanelItemSelectedBackgroundColor;
+        const QColor accent = this->m_accent.isValid() ? this->m_accent : this->palette().color(QPalette::Highlight);
+        p.setPen(QPen(accent, 1));
+        p.setBrush(UiMetrics::WithAlpha(accent, 40));
+        p.drawRoundedRect(r, UiMetrics::Radius::Card, UiMetrics::Radius::Card);
     } else if (this->m_hovered)
     {
-        bg = scheme->SidePanelItemHoverBackgroundColor;
-    } else
-    {
-        bg = scheme->SidePanelItemBackgroundColor;
+        p.setPen(Qt::NoPen);
+        p.setBrush(scheme->SidePanelItemHoverBackgroundColor);
+        p.drawRoundedRect(r, UiMetrics::Radius::Card, UiMetrics::Radius::Card);
     }
 
-    p.fillRect(r, bg);
+    // Text rows: "title ...... value" then the detail line, inset a bit more than the graph.
+    const QFont strongFont = UiMetrics::Font(UiMetrics::TextRole::Strong, this->font());
+    const QFont captionFont = UiMetrics::Font(UiMetrics::TextRole::Caption, this->font());
+    const QFontMetrics strongFm(strongFont);
+    const QFontMetrics captionFm(captionFont);
 
-    // Title/subtitle (single row): elide both sides to prevent overlap.
-    QFont titleFont = this->font();
-    titleFont.setBold(true);
-    titleFont.setPointSize(8);
-    const QFontMetrics titleFm(titleFont);
-    QFont subFont = this->font();
-    subFont.setPointSize(7);
-    const QFontMetrics subFm(subFont);
+    const int inset = UiMetrics::Space::S + UiMetrics::Space::XS;
+    const int top = UiMetrics::Space::S;
+    const int fullW = qMax(0, this->width() - 2 * inset);
 
-    const int left = 6;
-    const int right = 6;
-    const int top = 4;
-    const int textH = 16;
-    const int fullW = qMax(0, r.width() - left - right);
+    const QString valueText = strongFm.elidedText(this->m_value, Qt::ElideLeft, fullW * 6 / 10);
+    const int valueW = strongFm.horizontalAdvance(valueText);
+    const int titleMaxW = qMax(0, fullW - (valueW > 0 ? valueW + UiMetrics::Space::S : 0));
+    const QString titleText = strongFm.elidedText(this->m_title, Qt::ElideRight, titleMaxW);
 
-    // Allow a longer subtitle while keeping enough room for a readable title.
-    const int maxSubW = (fullW * 58) / 100;
-    const QString subText = subFm.elidedText(this->m_subtitle, Qt::ElideLeft, maxSubW);
-    const int subW = subFm.horizontalAdvance(subText);
+    p.setFont(strongFont);
+    p.setPen(this->m_selected ? scheme->SidePanelItemSelectedTextColor : scheme->SidePanelItemTextColor);
+    p.drawText(QRect(inset, top, titleMaxW, strongFm.height()), Qt::AlignLeft | Qt::AlignVCenter, titleText);
 
-    const int titleMaxW = qMax(0, fullW - (subW > 0 ? subW + 6 : 0));
-    const QString titleText = titleFm.elidedText(this->m_title, Qt::ElideRight, titleMaxW);
-
-    p.setFont(titleFont);
-    p.setPen(this->m_selected ? scheme->SidePanelItemSelectedTextColor
-                              : scheme->SidePanelItemTextColor);
-    p.drawText(QRect(left, top, titleMaxW, textH), Qt::AlignLeft | Qt::AlignVCenter, titleText);
-
-    if (!subText.isEmpty())
+    if (!valueText.isEmpty())
     {
-        p.setFont(subFont);
+        p.setPen(this->m_accent.isValid() ? this->m_accent : scheme->SidePanelItemTextColor);
+        p.drawText(QRect(this->width() - inset - valueW, top, valueW, strongFm.height()),
+                   Qt::AlignRight | Qt::AlignVCenter, valueText);
+    }
+
+    if (!this->m_detail.isEmpty())
+    {
+        p.setFont(captionFont);
         p.setPen(scheme->SidePanelItemSubtitleColor);
-        p.drawText(QRect(r.width() - right - subW, top, subW, textH),
-                   Qt::AlignRight | Qt::AlignVCenter,
-                   subText);
-    }
-
-    // Selection border
-    if (this->m_selected)
-    {
-        p.setPen(QPen(scheme->SidePanelItemSelectedBorderColor, 2));
-        p.setBrush(Qt::NoBrush);
-        p.drawRect(r.adjusted(1, 1, -1, -1));
+        const int detailTop = top + strongFm.height() + UiMetrics::Space::XXS;
+        p.drawText(QRect(inset, detailTop, fullW, captionFm.height()), Qt::AlignLeft | Qt::AlignVCenter,
+                   captionFm.elidedText(this->m_detail, Qt::ElideRight, fullW));
     }
 }
 
@@ -184,4 +215,11 @@ void SidePanelItem::leaveEvent(QEvent *event)
     QWidget::leaveEvent(event);
     this->m_hovered = false;
     this->update();
+}
+
+void SidePanelItem::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange)
+        this->updateMargins();
 }

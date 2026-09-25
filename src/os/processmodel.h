@@ -85,6 +85,8 @@ namespace OS
             const QList<Process> &GetProcesses() const { return this->m_processes; }
 
         private:
+            //! Alignment shared by the cells and the header of a column.
+            static QVariant columnAlignment(int column);
             QList<Process>          m_processes;
             AppRegistry            *m_appRegistry { nullptr };
             QHash<pid_t, quint64>   m_prevTicks;               ///< cpuTicks from previous sample

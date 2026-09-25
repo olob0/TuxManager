@@ -17,6 +17,7 @@
  */
 
 #include "sidepanel.h"
+#include "../ui/uimetrics.h"
 #include "../colorscheme.h"
 
 using namespace Perf;
@@ -27,8 +28,8 @@ SidePanel::SidePanel(QWidget *parent) : QWidget(parent)
     , m_containerLayout(new QVBoxLayout(this->m_container))
 {
     // Container inside the scroll area
-    this->m_containerLayout->setContentsMargins(0, 0, 0, 0);
-    this->m_containerLayout->setSpacing(1);
+    this->m_containerLayout->setContentsMargins(UiMetrics::Space::S, UiMetrics::Space::S, UiMetrics::Space::S, UiMetrics::Space::S);
+    this->m_containerLayout->setSpacing(UiMetrics::Space::XS);
     this->m_containerLayout->addStretch(1);      // pushes items to the top
 
     this->m_scrollArea->setWidget(this->m_container);
@@ -47,7 +48,8 @@ SidePanel::SidePanel(QWidget *parent) : QWidget(parent)
     outerLayout->addWidget(this->m_scrollArea);
     this->setLayout(outerLayout);
 
-    this->setMinimumWidth(150);
+    this->setMinimumWidth(UiMetrics::SidePanelMinWidth);
+    this->setMaximumWidth(UiMetrics::SidePanelMaxWidth);
 }
 
 void SidePanel::ApplyColorScheme()
@@ -146,14 +148,16 @@ void SidePanel::SetItemVisible(SidePanelItem *item, bool visible)
 
 bool SidePanel::IsItemVisible(SidePanelItem *item) const
 {
-    return item && item->isVisible();
+    // isHidden(), not isVisible(): items count as visible before the window is first shown,
+    // otherwise the initial selection would be dropped.
+    return item && !item->isHidden();
 }
 
 SidePanelItem *SidePanel::FirstVisibleItem() const
 {
     for (SidePanelItem *item : this->m_items)
     {
-        if (item && item->isVisible())
+        if (this->IsItemVisible(item))
             return item;
     }
     return nullptr;

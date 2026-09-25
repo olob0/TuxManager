@@ -24,6 +24,7 @@
 #include "runtaskdialog.h"
 #include "ui_processeswidget.h"
 #include "ui/uihelper.h"
+#include "ui/segmentedcontrol.h"
 
 #include <QClipboard>
 #include <QGuiApplication>
@@ -60,6 +61,7 @@ ProcessesWidget::ProcessesWidget(OS::ProcessRefreshService *processRefreshServic
     this->ui->setupUi(this);
 
     this->setupTable();
+    this->setupToolbar();
 
     connect(this->ui->searchEdit, &QLineEdit::textChanged, this, [this](const QString &text)
     {
@@ -181,6 +183,8 @@ void ProcessesWidget::setupTable()
 
     QTableView *tv = this->ui->tableView;
     this->m_treeView = new QTreeView(this);
+    UIHelper::ApplyItemViewStyle(tv);
+    UIHelper::ApplyItemViewStyle(this->m_treeView);
     tv->setIconSize(QSize(16, 16));
     this->m_treeView->setIconSize(QSize(16, 16));
     this->applyIconSetting();
@@ -224,24 +228,20 @@ void ProcessesWidget::setupTable()
 
     connect(tv, &QTableView::customContextMenuRequested, this, &ProcessesWidget::onTableContextMenu);
 
-    // Reasonable default column widths
-    tv->setColumnWidth(OS::ProcessModel::ColPid,      60);
-    tv->setColumnWidth(OS::ProcessModel::ColName,    160);
-    tv->setColumnWidth(OS::ProcessModel::ColUser,     90);
-    tv->setColumnWidth(OS::ProcessModel::ColState,    90);
-    tv->setColumnWidth(OS::ProcessModel::ColCpu,      65);
-    tv->setColumnWidth(OS::ProcessModel::ColMemRss,   80);
-    tv->setColumnWidth(OS::ProcessModel::ColMemVirt,  80);
-    tv->setColumnWidth(OS::ProcessModel::ColMemShared, 80);
-    tv->setColumnWidth(OS::ProcessModel::ColMemText,  80);
-    tv->setColumnWidth(OS::ProcessModel::ColMemData,  80);
-    tv->setColumnWidth(OS::ProcessModel::ColIoReads,  90);
-    tv->setColumnWidth(OS::ProcessModel::ColIoWrites, 90);
-    tv->setColumnWidth(OS::ProcessModel::ColIoReadsPerSec, 100);
-    tv->setColumnWidth(OS::ProcessModel::ColIoWritesPerSec, 100);
-    tv->setColumnWidth(OS::ProcessModel::ColThreads,  65);
-    tv->setColumnWidth(OS::ProcessModel::ColPriority, 65);
-    tv->setColumnWidth(OS::ProcessModel::ColNice,     50);
+    // Default column widths, in characters so they follow the font
+    const QHash<int, int> tableColumnChars =
+    {
+        { OS::ProcessModel::ColPid, 7 },         { OS::ProcessModel::ColName, 18 },
+        { OS::ProcessModel::ColUser, 9 },        { OS::ProcessModel::ColState, 9 },
+        { OS::ProcessModel::ColCpu, 7 },         { OS::ProcessModel::ColMemRss, 9 },
+        { OS::ProcessModel::ColMemVirt, 9 },     { OS::ProcessModel::ColMemShared, 9 },
+        { OS::ProcessModel::ColMemText, 9 },     { OS::ProcessModel::ColMemData, 9 },
+        { OS::ProcessModel::ColIoReads, 10 },    { OS::ProcessModel::ColIoWrites, 10 },
+        { OS::ProcessModel::ColIoReadsPerSec, 11 }, { OS::ProcessModel::ColIoWritesPerSec, 11 },
+        { OS::ProcessModel::ColThreads, 7 },     { OS::ProcessModel::ColPriority, 7 },
+        { OS::ProcessModel::ColNice, 5 }
+    };
+    UIHelper::SizeColumnsInChars(hv, tableColumnChars);
     // Hide less-common columns by default
     hv->hideSection(OS::ProcessModel::ColMemVirt);
     hv->hideSection(OS::ProcessModel::ColMemShared);
@@ -256,6 +256,7 @@ void ProcessesWidget::setupTable()
     if (!resetProcessHeaderState && !CFG->ProcessListHeaderState.isEmpty())
     {
         hv->restoreState(CFG->ProcessListHeaderState);
+        UIHelper::SizeColumnsInChars(hv, tableColumnChars, true);
     }
     if (migrateProcessNameFirstLayout)
     {
@@ -294,22 +295,18 @@ void ProcessesWidget::setupTable()
     });
     connect(treeHeader, &QHeaderView::sectionMoved, this, [this]() { this->saveTreeHeaderState(); });
     connect(treeHeader, &QHeaderView::sectionResized, this, [this]() { this->saveTreeHeaderState(); });
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColName, 220);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColUser, 90);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColState, 90);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColCpu, 65);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColMemRss, 80);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColMemVirt, 80);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColMemShared, 80);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColMemText, 80);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColMemData, 80);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColIoReads, 90);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColIoWrites, 90);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColIoReadsPerSec, 100);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColIoWritesPerSec, 100);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColThreads, 65);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColPriority, 65);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColNice, 50);
+    const QHash<int, int> treeColumnChars =
+    {
+        { OS::ProcessTreeModel::ColName, 25 },     { OS::ProcessTreeModel::ColUser, 9 },
+        { OS::ProcessTreeModel::ColState, 9 },     { OS::ProcessTreeModel::ColCpu, 7 },
+        { OS::ProcessTreeModel::ColMemRss, 9 },    { OS::ProcessTreeModel::ColMemVirt, 9 },
+        { OS::ProcessTreeModel::ColMemShared, 9 }, { OS::ProcessTreeModel::ColMemText, 9 },
+        { OS::ProcessTreeModel::ColMemData, 9 },   { OS::ProcessTreeModel::ColIoReads, 10 },
+        { OS::ProcessTreeModel::ColIoWrites, 10 }, { OS::ProcessTreeModel::ColIoReadsPerSec, 11 },
+        { OS::ProcessTreeModel::ColIoWritesPerSec, 11 }, { OS::ProcessTreeModel::ColThreads, 7 },
+        { OS::ProcessTreeModel::ColPriority, 7 },  { OS::ProcessTreeModel::ColNice, 5 }
+    };
+    UIHelper::SizeColumnsInChars(treeHeader, treeColumnChars);
     this->m_treeView->setColumnHidden(OS::ProcessTreeModel::ColMemVirt, true);
     this->m_treeView->setColumnHidden(OS::ProcessTreeModel::ColMemShared, true);
     this->m_treeView->setColumnHidden(OS::ProcessTreeModel::ColMemText, true);
@@ -325,10 +322,12 @@ void ProcessesWidget::setupTable()
     if (!resetProcessHeaderState && !CFG->ProcessTreeHeaderState.isEmpty())
     {
         treeHeader->restoreState(CFG->ProcessTreeHeaderState);
+        UIHelper::SizeColumnsInChars(treeHeader, treeColumnChars, true);
     }
     if (migrateProcessNameFirstLayout)
         treeHeader->moveSection(treeHeader->visualIndex(OS::ProcessTreeModel::ColName), 0);
-    this->m_treeView->setColumnWidth(OS::ProcessTreeModel::ColPid, 65);
+    // PID no longer holds the tree hierarchy, so always reset its width
+    UIHelper::SizeColumnsInChars(treeHeader, { { OS::ProcessTreeModel::ColPid, 7 } });
     this->syncAllProcessColumnVisibility();
     this->m_treeHeaderPersistenceEnabled = true;
     if (savedProcessColumnSchemaVersion < PROCESS_COLUMN_SCHEMA_VERSION)
@@ -341,6 +340,19 @@ void ProcessesWidget::setupTable()
     this->updateIOMetricsEnabledState(false);
 
     this->setTreeViewMode(CFG->ProcessTreeView);
+}
+
+void ProcessesWidget::setupToolbar()
+{
+    UIHelper::ApplyTabChrome(this, this->ui->toolbarLayout, this->ui->searchEdit, this->ui->statusLabel);
+
+    // List / tree switch next to the search field, mirrors the "View" context menu
+    this->m_viewModeSwitch = new SegmentedControl(this);
+    this->m_viewModeSwitch->AddSegment(tr("List"), tr("Table view"));
+    this->m_viewModeSwitch->AddSegment(tr("Tree"), tr("Tree view"));
+    this->m_viewModeSwitch->SetCurrentIndex(this->m_treeViewMode ? 1 : 0);
+    connect(this->m_viewModeSwitch, &SegmentedControl::activated, this, [this](int index) { this->setTreeViewMode(index == 1); });
+    this->ui->toolbarLayout->insertWidget(this->ui->toolbarLayout->indexOf(this->ui->searchEdit) + 1, this->m_viewModeSwitch);
 }
 
 void ProcessesWidget::setTreeViewMode(bool enabled)
@@ -360,6 +372,8 @@ void ProcessesWidget::setTreeViewMode(bool enabled)
 
     this->ui->tableView->setVisible(!enabled);
     this->m_treeView->setVisible(enabled);
+    if (this->m_viewModeSwitch)
+        this->m_viewModeSwitch->SetCurrentIndex(enabled ? 1 : 0);
 }
 
 void ProcessesWidget::SetActive(bool active)

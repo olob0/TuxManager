@@ -2,184 +2,66 @@
 <ui version="4.0">
  <class>DiskDetailWidget</class>
  <widget class="QWidget" name="DiskDetailWidget">
-  <property name="geometry">
-   <rect><x>0</x><y>0</y><width>760</width><height>620</height></rect>
-  </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,5,0,0,2,0,0">
-   <property name="leftMargin"><number>12</number></property>
-   <property name="topMargin"><number>10</number></property>
-   <property name="rightMargin"><number>12</number></property>
-   <property name="bottomMargin"><number>10</number></property>
-   <property name="spacing"><number>6</number></property>
-
+  <property name="geometry"><rect><x>0</x><y>0</y><width>900</width><height>560</height></rect></property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <!-- Header -->
    <item>
     <layout class="QHBoxLayout" name="headerLayout">
+     <item><layout class="QVBoxLayout" name="headerLabelLayout"><property name="spacing"><number>2</number></property><item><widget class="QLabel" name="titleLabel"><property name="text"><string>Disk</string></property></widget></item><item><widget class="QLabel" name="modelLabel"><property name="text"><string notr="true"></string></property></widget></item></layout></item>
+    </layout>
+   </item>
+   <!-- Body: graph column + statistics -->
+   <item>
+    <layout class="QHBoxLayout" name="bodyLayout">
      <item>
-      <widget class="QLabel" name="titleLabel">
-       <property name="text"><string>Disk</string></property>
-       <property name="styleSheet"><string>font-size: 18pt; font-weight: bold;</string></property>
-      </widget>
+      <layout class="QVBoxLayout" name="graphColumn">
+       <item>
+<widget class="Perf::GraphCard" name="activeCard">
+ <property name="sizePolicy"><sizepolicy hsizetype="Preferred" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>3</verstretch></sizepolicy></property>
+ <layout class="QVBoxLayout" name="activeCardLayout">
+  <item><layout class="QHBoxLayout" name="activeCardHeaderLayout"><item><widget class="QLabel" name="activeGraphLabel"><property name="text"><string>Active time</string></property></widget></item><item><widget class="QLabel" name="activeGraphMaxLabel"><property name="text"><string>100%</string></property></widget></item></layout></item>
+  <item><widget class="Perf::GraphWidget" name="activeGraphWidget" native="true"><property name="minimumHeight"><number>100</number></property><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>1</verstretch></sizepolicy></property></widget></item>
+  <item><layout class="QHBoxLayout" name="activeCardAxisLayout"><item><widget class="QLabel" name="activeTimeLeftLabel"><property name="text"><string>60 seconds</string></property></widget></item><item><widget class="QLabel" name="activeTimeRightLabel"><property name="text"><string>0</string></property></widget></item></layout></item>
+ </layout>
+</widget>
+       </item>
+       <item>
+<widget class="Perf::GraphCard" name="transferCard">
+ <property name="sizePolicy"><sizepolicy hsizetype="Preferred" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>2</verstretch></sizepolicy></property>
+ <layout class="QVBoxLayout" name="transferCardLayout">
+  <item><layout class="QHBoxLayout" name="transferCardHeaderLayout"><item><widget class="QLabel" name="transferGraphLabel"><property name="text"><string>Disk transfer rate</string></property></widget></item><item><widget class="QLabel" name="transferGraphMaxLabel"><property name="text"><string>0 KB/s</string></property></widget></item></layout></item>
+  <item><widget class="Perf::GraphWidget" name="transferGraphWidget" native="true"><property name="minimumHeight"><number>100</number></property><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>1</verstretch></sizepolicy></property></widget></item>
+  <item><layout class="QHBoxLayout" name="transferCardAxisLayout"><item><widget class="QLabel" name="transferTimeLeftLabel"><property name="text"><string>60 seconds</string></property></widget></item><item><widget class="QLabel" name="transferTimeRightLabel"><property name="text"><string>0</string></property></widget></item></layout></item>
+ </layout>
+</widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <spacer>
-       <property name="orientation"><enum>Qt::Horizontal</enum></property>
-       <property name="sizeHint" stdset="0"><size><width>40</width><height>0</height></size></property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLabel" name="modelLabel">
-       <property name="text"><string></string></property>
-       <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
-       <property name="styleSheet"><string>font-size: 12pt;</string></property>
+      <!-- Labels are handed to the panel in display order by DiskDetailWidget -->
+      <widget class="Perf::StatsPanel" name="statsPanel">
+       <widget class="QLabel" name="activeLabel"><property name="text"><string>Active time</string></property></widget>
+       <widget class="QLabel" name="activeValueLabel"><property name="text"><string>0%</string></property></widget>
+       <widget class="QLabel" name="readLabel"><property name="text"><string>Read speed</string></property></widget>
+       <widget class="QLabel" name="readValueLabel"><property name="text"><string>0 KB/s</string></property></widget>
+       <widget class="QLabel" name="writeLabel"><property name="text"><string>Write speed</string></property></widget>
+       <widget class="QLabel" name="writeValueLabel"><property name="text"><string>0 KB/s</string></property></widget>
+       <widget class="QLabel" name="capacityLabel"><property name="text"><string>Capacity</string></property></widget>
+       <widget class="QLabel" name="capacityValueLabel"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="formattedLabel"><property name="text"><string>Formatted</string></property></widget>
+       <widget class="QLabel" name="formattedValueLabel"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="systemDiskLabel"><property name="text"><string>System disk</string></property></widget>
+       <widget class="QLabel" name="systemDiskValueLabel"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="swapDeviceLabel"><property name="text"><string>Swap device</string></property></widget>
+       <widget class="QLabel" name="swapDeviceValueLabel"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="deviceLabel"><property name="text"><string>Device</string></property></widget>
+       <widget class="QLabel" name="deviceValueLabel"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="typeLabel"><property name="text"><string>Type</string></property></widget>
+       <widget class="QLabel" name="typeValueLabel"><property name="text"><string>—</string></property></widget>
       </widget>
      </item>
     </layout>
    </item>
-
-   <item>
-    <layout class="QHBoxLayout" name="activeLabelLayout">
-     <item>
-      <widget class="QLabel" name="activeGraphLabel">
-       <property name="text"><string>Active time</string></property>
-       <property name="styleSheet"><string>font-size: 8pt;</string></property>
-      </widget>
-     </item>
-     <item>
-      <spacer>
-       <property name="orientation"><enum>Qt::Horizontal</enum></property>
-       <property name="sizeHint" stdset="0"><size><width>40</width><height>0</height></size></property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLabel" name="activeGraphMaxLabel">
-       <property name="text"><string>100%</string></property>
-       <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
-       <property name="styleSheet"><string>font-size: 8pt;</string></property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-
-   <item>
-    <widget class="Perf::GraphWidget" name="activeGraphWidget">
-     <property name="minimumHeight"><number>220</number></property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>1</verstretch>
-      </sizepolicy>
-     </property>
-    </widget>
-   </item>
-
-   <item>
-    <layout class="QHBoxLayout" name="activeTimeAxisLayout">
-     <item>
-      <widget class="QLabel" name="activeTimeLeftLabel">
-       <property name="text"><string>60 seconds</string></property>
-       <property name="styleSheet"><string>font-size: 8pt;</string></property>
-      </widget>
-     </item>
-     <item>
-      <spacer>
-       <property name="orientation"><enum>Qt::Horizontal</enum></property>
-       <property name="sizeHint" stdset="0"><size><width>40</width><height>0</height></size></property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLabel" name="activeTimeRightLabel">
-       <property name="text"><string>0</string></property>
-       <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
-       <property name="styleSheet"><string>font-size: 8pt;</string></property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-
-   <item>
-    <layout class="QHBoxLayout" name="transferLabelLayout">
-     <item>
-      <widget class="QLabel" name="transferGraphLabel">
-       <property name="text"><string>Disk transfer rate</string></property>
-       <property name="styleSheet"><string>font-size: 8pt;</string></property>
-      </widget>
-     </item>
-     <item>
-      <spacer>
-       <property name="orientation"><enum>Qt::Horizontal</enum></property>
-       <property name="sizeHint" stdset="0"><size><width>40</width><height>0</height></size></property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLabel" name="transferGraphMaxLabel">
-       <property name="text"><string>0 KB/s</string></property>
-       <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
-       <property name="styleSheet"><string>font-size: 8pt;</string></property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-
-   <item>
-    <widget class="Perf::GraphWidget" name="transferGraphWidget">
-     <property name="minimumHeight"><number>110</number></property>
-    </widget>
-   </item>
-
-   <item>
-    <layout class="QHBoxLayout" name="transferTimeAxisLayout">
-     <item>
-      <widget class="QLabel" name="transferTimeLeftLabel">
-       <property name="text"><string>60 seconds</string></property>
-       <property name="styleSheet"><string>font-size: 8pt;</string></property>
-      </widget>
-     </item>
-     <item>
-      <spacer>
-       <property name="orientation"><enum>Qt::Horizontal</enum></property>
-       <property name="sizeHint" stdset="0"><size><width>40</width><height>0</height></size></property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLabel" name="transferTimeRightLabel">
-       <property name="text"><string>0</string></property>
-       <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
-       <property name="styleSheet"><string>font-size: 8pt;</string></property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-
-   <item>
-    <layout class="QGridLayout" name="statsGrid">
-     <property name="horizontalSpacing"><number>24</number></property>
-     <property name="verticalSpacing"><number>8</number></property>
-
-     <item row="0" column="0"><widget class="QLabel" name="activeLabel"><property name="text"><string>Active time</string></property><property name="styleSheet"><string></string></property></widget></item>
-     <item row="0" column="1"><widget class="QLabel" name="activeValueLabel"><property name="text"><string>0%</string></property></widget></item>
-     <item row="0" column="2"><widget class="QLabel" name="capacityLabel"><property name="text"><string>Capacity</string></property><property name="styleSheet"><string></string></property></widget></item>
-     <item row="0" column="3"><widget class="QLabel" name="capacityValueLabel"><property name="text"><string>—</string></property></widget></item>
-
-     <item row="1" column="0"><widget class="QLabel" name="readLabel"><property name="text"><string>Read speed</string></property><property name="styleSheet"><string></string></property></widget></item>
-     <item row="1" column="1"><widget class="QLabel" name="readValueLabel"><property name="text"><string>0 KB/s</string></property></widget></item>
-     <item row="1" column="2"><widget class="QLabel" name="formattedLabel"><property name="text"><string>Formatted</string></property><property name="styleSheet"><string></string></property></widget></item>
-     <item row="1" column="3"><widget class="QLabel" name="formattedValueLabel"><property name="text"><string>—</string></property></widget></item>
-
-     <item row="2" column="0"><widget class="QLabel" name="writeLabel"><property name="text"><string>Write speed</string></property><property name="styleSheet"><string></string></property></widget></item>
-     <item row="2" column="1"><widget class="QLabel" name="writeValueLabel"><property name="text"><string>0 KB/s</string></property></widget></item>
-     <item row="2" column="2"><widget class="QLabel" name="systemDiskLabel"><property name="text"><string>System disk</string></property><property name="styleSheet"><string></string></property></widget></item>
-     <item row="2" column="3"><widget class="QLabel" name="systemDiskValueLabel"><property name="text"><string>—</string></property></widget></item>
-
-     <item row="3" column="0"><widget class="QLabel" name="deviceLabel"><property name="text"><string>Device</string></property><property name="styleSheet"><string></string></property></widget></item>
-     <item row="3" column="1"><widget class="QLabel" name="deviceValueLabel"><property name="text"><string>—</string></property></widget></item>
-     <item row="3" column="2"><widget class="QLabel" name="swapDeviceLabel"><property name="text"><string>Swap device</string></property><property name="styleSheet"><string></string></property></widget></item>
-     <item row="3" column="3"><widget class="QLabel" name="swapDeviceValueLabel"><property name="text"><string>—</string></property></widget></item>
-
-     <item row="4" column="2"><widget class="QLabel" name="typeLabel"><property name="text"><string>Type</string></property><property name="styleSheet"><string></string></property></widget></item>
-     <item row="4" column="3"><widget class="QLabel" name="typeValueLabel"><property name="text"><string>—</string></property></widget></item>
-    </layout>
-   </item>
-
   </layout>
  </widget>
  <customwidgets>
@@ -187,6 +69,18 @@
    <class>Perf::GraphWidget</class>
    <extends>QWidget</extends>
    <header>perf/graphwidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Perf::GraphCard</class>
+   <extends>QFrame</extends>
+   <header>perf/graphcard.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>Perf::StatsPanel</class>
+   <extends>QFrame</extends>
+   <header>perf/statspanel.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

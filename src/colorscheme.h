@@ -69,17 +69,13 @@ class ColorScheme
         QColor GraphGridColor;
         QColor GraphOverlayTextColor;
         QColor SidePanelBackgroundColor;
-        QColor SidePanelItemSelectedBackgroundColor;
         QColor SidePanelItemHoverBackgroundColor;
-        QColor SidePanelItemBackgroundColor;
         QColor SidePanelItemSelectedTextColor;
         QColor SidePanelItemTextColor;
         QColor SidePanelItemSubtitleColor;
-        QColor SidePanelItemSelectedBorderColor;
         QColor CpuTitleColor;
         QColor CpuHeaderValueColor;
         QColor MemoryTitleColor;
-        QColor MemoryHeaderValueColor;
         QColor DiskTitleColor;
         QColor DiskHeaderValueColor;
         QColor NetworkTitleColor;
@@ -101,6 +97,9 @@ class ColorScheme
         QColor MemoryBarBorderColor;
 
     private:
+        //! Chrome colors (side panel, labels) follow the active Qt palette so they match the system theme.
+        void applyPaletteNeutrals();
+
         static ColorScheme *current;
 };
 

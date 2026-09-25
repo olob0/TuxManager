@@ -25,46 +25,31 @@
 #include "../ui/uihelper.h"
 #include "../ui/widgetstyle.h"
 
-#include <QGridLayout>
 #include <QLabel>
+#include <QPair>
 
 using namespace Perf;
 
-MemoryDetailWidget::MemoryDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::MemoryDetailWidget)
+MemoryDetailWidget::MemoryDetailWidget(QWidget *parent) : DetailPage(parent), ui(new Ui::MemoryDetailWidget)
 {
     this->ui->setupUi(this);
     const ColorScheme *scheme = ColorScheme::GetCurrent();
 
-    WidgetStyle::ApplyTextStyle(this->ui->titleLabel, scheme->MemoryTitleColor, 18, true);
-    WidgetStyle::ApplyTextStyle(this->ui->totalLabel, scheme->MemoryHeaderValueColor, 18);
-    WidgetStyle::ApplyTextStyle(this->ui->timeLeftLabel, scheme->AxisLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->timeRightLabel, scheme->AxisLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->compositionLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendUsedDot, scheme->MemoryLegendUsedColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendUsedLabel, scheme->MemoryLegendTextColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendCompressedDot, scheme->MemoryLegendCompressedColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendCompressedLabel, scheme->MemoryLegendTextColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendDirtyDot, scheme->MemoryLegendDirtyColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendDirtyLabel, scheme->MemoryLegendTextColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendCachedDot, scheme->MemoryLegendCachedColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendCachedLabel, scheme->MemoryLegendTextColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendFreeDot, scheme->MemoryLegendFreeColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendFreeLabel, scheme->MemoryLegendTextColor, 8);
+    this->ui->statsPanel->AddStat(this->ui->inUseLabel, this->ui->statInUseValue);
+    this->ui->statsPanel->AddStat(this->ui->availableLabel, this->ui->statAvailValue);
+    this->ui->statsPanel->AddStat(this->ui->cachedLabel, this->ui->statCachedValue);
+    this->ui->statsPanel->AddStat(this->ui->freeLabel, this->ui->statFreeValue);
+    this->ui->statsPanel->AddDetail(this->ui->dirtyLabel, this->ui->statDirtyValue);
+    this->ui->statsPanel->AddDetail(this->ui->buffersLabel, this->ui->statBuffersValue);
+    this->ui->statsPanel->AddDetail(this->ui->compressedLabel, this->ui->statCompressedValue);
+    this->ui->statsPanel->AddDetail(this->ui->dimmSlotsLabel, this->ui->statDimmSlotsValue);
+    this->ui->statsPanel->AddDetail(this->ui->memorySpeedLabel, this->ui->statMemSpeedValue);
 
-    if (QGridLayout *statsGrid = this->findChild<QGridLayout *>("statsGrid"))
-    {
-        for (int row = 0; row < statsGrid->rowCount(); ++row)
-        {
-            for (int column = 0; column < statsGrid->columnCount(); column += 2)
-            {
-                if (QLayoutItem *item = statsGrid->itemAtPosition(row, column))
-                {
-                    if (QLabel *label = qobject_cast<QLabel *>(item->widget()))
-                        WidgetStyle::ApplyTextStyle(label, scheme->StatLabelColor);
-                }
-            }
-        }
-    }
+    this->ui->usageCard->SetHeader(this->ui->usageGraphLabel, this->ui->usageGraphMaxLabel);
+    this->ui->usageCard->SetTimeAxis(this->ui->timeLeftLabel, this->ui->timeRightLabel);
+    this->ui->compositionCard->SetHeader(this->ui->compositionLabel);
+
+    this->setupPage({ this->ui->titleLabel, this->ui->totalLabel, this->ui->headerLayout, this->ui->bodyLayout, this->ui->statsPanel });
 
     // Memory graph: purple / magenta
     this->ui->graphWidget->SetColor(scheme->MemoryGraphLineColor, scheme->MemoryGraphFillColor);
@@ -85,6 +70,7 @@ MemoryDetailWidget::MemoryDetailWidget(QWidget *parent) : QWidget(parent), ui(ne
     UIHelper::EnableCopyLabelContextMenu(this->ui->statMemSpeedValue);
 
     this->updateCompressedVisibility(false);
+    this->applyStyle();
 }
 
 MemoryDetailWidget::~MemoryDetailWidget()
@@ -95,40 +81,31 @@ MemoryDetailWidget::~MemoryDetailWidget()
 void MemoryDetailWidget::ApplyColorScheme()
 {
     const ColorScheme *scheme = ColorScheme::GetCurrent();
-    WidgetStyle::ApplyTextStyle(this->ui->titleLabel, scheme->MemoryTitleColor, 18, true);
-    WidgetStyle::ApplyTextStyle(this->ui->totalLabel, scheme->MemoryHeaderValueColor, 18);
-    WidgetStyle::ApplyTextStyle(this->ui->timeLeftLabel, scheme->AxisLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->timeRightLabel, scheme->AxisLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->compositionLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendUsedDot, scheme->MemoryLegendUsedColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendUsedLabel, scheme->MemoryLegendTextColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendCompressedDot, scheme->MemoryLegendCompressedColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendCompressedLabel, scheme->MemoryLegendTextColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendDirtyDot, scheme->MemoryLegendDirtyColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendDirtyLabel, scheme->MemoryLegendTextColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendCachedDot, scheme->MemoryLegendCachedColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendCachedLabel, scheme->MemoryLegendTextColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendFreeDot, scheme->MemoryLegendFreeColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->legendFreeLabel, scheme->MemoryLegendTextColor, 8);
-
-    if (QGridLayout *statsGrid = this->findChild<QGridLayout *>("statsGrid"))
-    {
-        for (int row = 0; row < statsGrid->rowCount(); ++row)
-        {
-            for (int column = 0; column < statsGrid->columnCount(); column += 2)
-            {
-                if (QLayoutItem *item = statsGrid->itemAtPosition(row, column))
-                {
-                    if (QLabel *label = qobject_cast<QLabel *>(item->widget()))
-                        WidgetStyle::ApplyTextStyle(label, scheme->StatLabelColor);
-                }
-            }
-        }
-    }
-
+    this->applyStyle();
     this->ui->graphWidget->SetColor(scheme->MemoryGraphLineColor, scheme->MemoryGraphFillColor);
     this->ui->compositionBar->update();
-    this->update();
+}
+
+void MemoryDetailWidget::applyStyle()
+{
+    const ColorScheme *scheme = ColorScheme::GetCurrent();
+    this->applyPageStyle(scheme->MemoryTitleColor);
+
+    const QList<QPair<QLabel *, QColor>> legend =
+    {
+        { this->ui->legendUsedDot, scheme->MemoryLegendUsedColor },
+        { this->ui->legendCompressedDot, scheme->MemoryLegendCompressedColor },
+        { this->ui->legendDirtyDot, scheme->MemoryLegendDirtyColor },
+        { this->ui->legendCachedDot, scheme->MemoryLegendCachedColor },
+        { this->ui->legendFreeDot, scheme->MemoryLegendFreeColor },
+        { this->ui->legendUsedLabel, scheme->MemoryLegendTextColor },
+        { this->ui->legendCompressedLabel, scheme->MemoryLegendTextColor },
+        { this->ui->legendDirtyLabel, scheme->MemoryLegendTextColor },
+        { this->ui->legendCachedLabel, scheme->MemoryLegendTextColor },
+        { this->ui->legendFreeLabel, scheme->MemoryLegendTextColor }
+    };
+    for (const auto &entry : legend)
+        WidgetStyle::ApplyTextStyle(entry.first, entry.second, UiMetrics::TextRole::Caption);
 }
 
 void MemoryDetailWidget::Init()
@@ -138,7 +115,7 @@ void MemoryDetailWidget::Init()
     const qint64 total = Metrics::GetMemory()->MemTotalKb();
     this->m_memHistory = &Metrics::GetMemory()->MemHistory();
 
-    this->ui->totalLabel->setText(Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, total)), 1));
+    QStringList description { tr("%1 total").arg(Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, total)), 1)) };
     this->ui->graphWidget->SetPercentTooltipAbsolute(static_cast<double>(total) / (1024.0 * 1024.0), tr("GB"), 2);
     this->ui->graphWidget->SetDataSource(*this->m_memHistory);
 
@@ -151,9 +128,14 @@ void MemoryDetailWidget::Init()
 
     const int memMtps = Metrics::GetMemory()->MemSpeedMtps();
     if (memMtps > 0)
+    {
         this->ui->statMemSpeedValue->setText(tr("%1 MT/s").arg(memMtps));
-    else
+        description << this->ui->statMemSpeedValue->text();
+    } else
+    {
         this->ui->statMemSpeedValue->setText(tr("—"));
+    }
+    this->ui->totalLabel->setText(description.join(QStringLiteral(" · ")));
 
     connect(Metrics::Get(), &Metrics::updated, this, &MemoryDetailWidget::onUpdated);
     this->onUpdated();
@@ -205,6 +187,5 @@ void MemoryDetailWidget::updateCompressedVisibility(bool visible)
 {
     this->ui->legendCompressedDot->setVisible(visible);
     this->ui->legendCompressedLabel->setVisible(visible);
-    this->ui->compressedLabel->setVisible(visible);
-    this->ui->statCompressedValue->setVisible(visible);
+    this->ui->statsPanel->SetEntryVisible(this->ui->statCompressedValue, visible);
 }

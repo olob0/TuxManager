@@ -64,6 +64,9 @@ namespace Perf
 
             //! Optional: change the line / fill colour pair from the default blue.
             void SetColor(QColor line, QColor fill, QColor fill2 = QColor());
+            //! Draws the overlay as a line of its own in this color instead of a darker fill,
+            //! for two independent series such as TX / RX. An invalid color restores the fill.
+            void SetOverlayLineColor(const QColor &color) { this->m_overlayLineColor = color; this->update(); }
 
             //! Number of horizontal grid divisions.
             void SetGridColumns(int cols) { this->m_gridCols = cols; this->update(); }
@@ -90,6 +93,7 @@ namespace Perf
             //! Select value formatting mode for tooltip text rendering.
             void SetValueFormat(ValueFormat fmt) { this->m_valueFormat = fmt; }
             //! Draw a fixed helper label in the graph area (for per-core frequency etc.).
+            //! The label is skipped while the graph is too small to show it without covering the data.
             void SetOverlayText(const QString &text);
             //! For percent histories, also show absolute value in tooltips using max*percent.
             void SetPercentTooltipAbsolute(double maxAbsoluteValue, const QString &unitLabel, int precision = 2);
@@ -110,6 +114,7 @@ namespace Perf
             QColor          m_lineColor;
             QColor          m_fillColor;
             QColor          m_fillColor2;
+            QColor          m_overlayLineColor;
 
             int             m_gridCols  { 5 };
             int             m_gridRows  { 4 };

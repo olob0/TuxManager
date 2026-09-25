@@ -19,6 +19,7 @@
 #ifndef PERF_NETWORKDETAILWIDGET_H
 #define PERF_NETWORKDETAILWIDGET_H
 
+#include "detailpage.h"
 #include "historybuffer.h"
 #include <QWidget>
 
@@ -28,7 +29,7 @@ QT_END_NAMESPACE
 
 namespace Perf
 {
-    class NetworkDetailWidget : public QWidget
+    class NetworkDetailWidget : public DetailPage
     {
         Q_OBJECT
 
@@ -46,6 +47,7 @@ namespace Perf
             void onShowBytesTriggered();
 
         private:
+            void applyStyle();
             void applyTransferUnitMode();
             QString formatTransferRate(double bytesPerSec) const;
 

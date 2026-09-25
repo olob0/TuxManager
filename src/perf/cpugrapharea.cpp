@@ -19,6 +19,7 @@
 #include "cpugrapharea.h"
 
 #include "../colorscheme.h"
+#include "../ui/uimetrics.h"
 #include "configuration.h"
 #include "graphwidget.h"
 #include "metrics.h"
@@ -42,7 +43,7 @@ CpuGraphArea::CpuGraphArea(QWidget *parent) : QWidget(parent), m_stack(new QStac
     // Page 1 — per-core grid (populated lazily in ensureCoreGraphs)
     this->m_perCoreContainer = new QWidget(this->m_stack);
     this->m_perCoreGrid      = new QGridLayout(this->m_perCoreContainer);
-    this->m_perCoreGrid->setSpacing(4);
+    this->m_perCoreGrid->setSpacing(UiMetrics::Space::XS);
     this->m_perCoreGrid->setContentsMargins(0, 0, 0, 0);
     this->m_perCoreContainer->setLayout(this->m_perCoreGrid);
     this->m_stack->addWidget(this->m_perCoreContainer);  // index 1

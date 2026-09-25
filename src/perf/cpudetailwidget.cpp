@@ -22,42 +22,43 @@
 #include "metrics.h"
 #include "../colorscheme.h"
 #include "../ui/uihelper.h"
-#include "../ui/widgetstyle.h"
+#include "../ui/segmentedcontrol.h"
 
 #include <QAction>
 #include <QFile>
-#include <QGridLayout>
 #include <QLabel>
 #include <QMenu>
 #include <QVBoxLayout>
 
 using namespace Perf;
 
-CpuDetailWidget::CpuDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::CpuDetailWidget)
+CpuDetailWidget::CpuDetailWidget(QWidget *parent) : DetailPage(parent), ui(new Ui::CpuDetailWidget)
 {
     this->ui->setupUi(this);
-    const ColorScheme *scheme = ColorScheme::GetCurrent();
 
-    WidgetStyle::ApplyTextStyle(this->ui->titleLabel, scheme->CpuTitleColor, 18, true);
-    WidgetStyle::ApplyTextStyle(this->ui->modelNameLabel, scheme->MutedTextColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->utilizationLabel, scheme->CpuHeaderValueColor, 18);
-    WidgetStyle::ApplyTextStyle(this->ui->timeLeftLabel, scheme->AxisLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->timeRightLabel, scheme->AxisLabelColor, 8);
+    this->ui->statsPanel->AddStat(this->ui->statUtilLabel, this->ui->statUtilValue);
+    this->ui->statsPanel->AddStat(this->ui->statSpeedLabel, this->ui->statSpeedValue);
+    this->ui->statsPanel->AddStat(this->ui->statProcessesLabel, this->ui->statProcessesValue);
+    this->ui->statsPanel->AddStat(this->ui->statThreadsLabel, this->ui->statThreadsValue);
+    this->ui->statsPanel->AddStat(this->ui->statTempLabel, this->ui->statTempValue);
+    this->ui->statsPanel->AddStat(this->ui->statUptimeLabel, this->ui->statUptimeValue);
+    this->ui->statsPanel->AddDetail(this->ui->statLogicalCpusLabel, this->ui->statLogicalCpusValue);
+    this->ui->statsPanel->AddDetail(this->ui->statVmLabel, this->ui->statVmValue);
 
-    if (QGridLayout *statsGrid = this->findChild<QGridLayout *>("statsGrid"))
+    this->ui->graphCard->SetHeader(this->ui->graphTitleLabel, this->ui->graphMaxLabel);
+    this->ui->graphCard->SetTimeAxis(this->ui->timeLeftLabel, this->ui->timeRightLabel);
+
+    // Graph mode switch in the header, mirrors the "Change graph to" context menu
+    this->m_modeSwitch = new SegmentedControl(this);
+    this->m_modeSwitch->AddSegment(tr("Overall"), tr("Overall utilization"));
+    this->m_modeSwitch->AddSegment(tr("Per core"), tr("Logical processors"));
+    connect(this->m_modeSwitch, &SegmentedControl::activated, this, [this](int index)
     {
-        for (int row = 0; row < statsGrid->rowCount(); ++row)
-        {
-            for (int column = 0; column < statsGrid->columnCount(); column += 2)
-            {
-                if (QLayoutItem *item = statsGrid->itemAtPosition(row, column))
-                {
-                    if (QLabel *label = qobject_cast<QLabel *>(item->widget()))
-                        WidgetStyle::ApplyTextStyle(label, scheme->StatLabelColor);
-                }
-            }
-        }
-    }
+        this->setGraphMode(index == 1 ? CpuGraphArea::GraphMode::PerCore : CpuGraphArea::GraphMode::Overall);
+    });
+
+    this->setupPage({ this->ui->titleLabel, this->ui->modelNameLabel, this->ui->headerLayout, this->ui->bodyLayout,
+                      this->ui->statsPanel, this->m_modeSwitch });
 
     // Embed CpuGraphArea into the plain container widget from the .ui
     this->m_graphArea = new CpuGraphArea(this->ui->graphAreaContainer);
@@ -68,10 +69,9 @@ CpuDetailWidget::CpuDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::
 
     connect(this->m_graphArea, &CpuGraphArea::contextMenuRequested, this, &CpuDetailWidget::onContextMenuRequested);
 
-    this->m_graphArea->SetMode(
-                CFG->CpuGraphMode == 1
-                ? CpuGraphArea::GraphMode::PerCore
-                : CpuGraphArea::GraphMode::Overall);
+    this->setGraphMode(CFG->CpuGraphMode == 1
+                       ? CpuGraphArea::GraphMode::PerCore
+                       : CpuGraphArea::GraphMode::Overall);
     this->m_graphArea->SetShowKernelTime(CFG->CpuShowKernelTimes);
     UIHelper::EnableCopyLabelContextMenu(this->ui->statUtilValue);
     UIHelper::EnableCopyLabelContextMenu(this->ui->statSpeedValue);
@@ -81,6 +81,8 @@ CpuDetailWidget::CpuDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::
     UIHelper::EnableCopyLabelContextMenu(this->ui->statLogicalCpusValue);
     UIHelper::EnableCopyLabelContextMenu(this->ui->statVmValue);
     UIHelper::EnableCopyLabelContextMenu(this->ui->statTempValue);
+
+    this->applyStyle();
 }
 
 CpuDetailWidget::~CpuDetailWidget()
@@ -101,30 +103,20 @@ void CpuDetailWidget::Init()
 
 void CpuDetailWidget::ApplyColorScheme()
 {
-    const ColorScheme *scheme = ColorScheme::GetCurrent();
-    WidgetStyle::ApplyTextStyle(this->ui->titleLabel, scheme->CpuTitleColor, 18, true);
-    WidgetStyle::ApplyTextStyle(this->ui->modelNameLabel, scheme->MutedTextColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->utilizationLabel, scheme->CpuHeaderValueColor, 18);
-    WidgetStyle::ApplyTextStyle(this->ui->timeLeftLabel, scheme->AxisLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->timeRightLabel, scheme->AxisLabelColor, 8);
-
-    if (QGridLayout *statsGrid = this->findChild<QGridLayout *>("statsGrid"))
-    {
-        for (int row = 0; row < statsGrid->rowCount(); ++row)
-        {
-            for (int column = 0; column < statsGrid->columnCount(); column += 2)
-            {
-                if (QLayoutItem *item = statsGrid->itemAtPosition(row, column))
-                {
-                    if (QLabel *label = qobject_cast<QLabel *>(item->widget()))
-                        WidgetStyle::ApplyTextStyle(label, scheme->StatLabelColor);
-                }
-            }
-        }
-    }
-
+    this->applyStyle();
     this->m_graphArea->ApplyColorScheme();
-    this->update();
+}
+
+void CpuDetailWidget::applyStyle()
+{
+    this->applyPageStyle(ColorScheme::GetCurrent()->CpuTitleColor);
+}
+
+void CpuDetailWidget::setGraphMode(CpuGraphArea::GraphMode mode)
+{
+    this->m_graphArea->SetMode(mode);
+    CFG->CpuGraphMode = (mode == CpuGraphArea::GraphMode::PerCore) ? 1 : 0;
+    this->m_modeSwitch->SetCurrentIndex(mode == CpuGraphArea::GraphMode::PerCore ? 1 : 0);
 }
 
 // ── Private slots ─────────────────────────────────────────────────────────────
@@ -132,9 +124,6 @@ void CpuDetailWidget::ApplyColorScheme()
 void CpuDetailWidget::onUpdated()
 {
     const double pct = Metrics::GetCPU()->CpuPercent();
-
-    // Header utilisation
-    this->ui->utilizationLabel->setText(QString::number(pct, 'f', 0) + "%");
 
     // Stats panel
     this->ui->statUtilValue->setText(QString::number(pct, 'f', 1) + "%");
@@ -147,7 +136,7 @@ void CpuDetailWidget::onUpdated()
         this->ui->statSpeedValue->setText(tr("—"));
 
     const int cpuTempC = Metrics::GetCPU()->CpuTemperatureC();
-    this->ui->statTempValue->setText(cpuTempC >= 0 ? tr("%1 C").arg(cpuTempC) : tr("—"));
+    this->ui->statTempValue->setText(cpuTempC >= 0 ? tr("%1 °C").arg(cpuTempC) : tr("—"));
 
     this->ui->statProcessesValue->setText(QString::number(Metrics::GetKernel()->ProcessCount()));
     this->ui->statThreadsValue->setText(QString::number(Metrics::GetKernel()->ThreadCount()));
@@ -212,13 +201,11 @@ void CpuDetailWidget::onContextMenuRequested(const QPoint &globalPos)
 
     connect(actOverall, &QAction::triggered, this, [this]()
     {
-        this->m_graphArea->SetMode(CpuGraphArea::GraphMode::Overall);
-        CFG->CpuGraphMode = 0;
+        this->setGraphMode(CpuGraphArea::GraphMode::Overall);
     });
     connect(actPerCore, &QAction::triggered, this, [this]()
     {
-        this->m_graphArea->SetMode(CpuGraphArea::GraphMode::PerCore);
-        CFG->CpuGraphMode = 1;
+        this->setGraphMode(CpuGraphArea::GraphMode::PerCore);
     });
 
     menu.addSeparator();

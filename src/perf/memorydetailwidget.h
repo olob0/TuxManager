@@ -19,6 +19,7 @@
 #ifndef PERF_MEMORYDETAILWIDGET_H
 #define PERF_MEMORYDETAILWIDGET_H
 
+#include "detailpage.h"
 #include "historybuffer.h"
 
 #include <QWidget>
@@ -29,7 +30,7 @@ QT_END_NAMESPACE
 
 namespace Perf
 {
-    class MemoryDetailWidget : public QWidget
+    class MemoryDetailWidget : public DetailPage
     {
         Q_OBJECT
 
@@ -44,6 +45,7 @@ namespace Perf
             void onUpdated();
 
         private:
+            void applyStyle();
             void updateCompressedVisibility(bool visible);
 
             Ui::MemoryDetailWidget *ui;

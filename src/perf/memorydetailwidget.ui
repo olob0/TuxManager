@@ -3,425 +3,148 @@
  <class>MemoryDetailWidget</class>
  <widget class="QWidget" name="MemoryDetailWidget">
   <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>600</width>
-    <height>500</height>
-   </rect>
+   <rect><x>0</x><y>0</y><width>900</width><height>560</height></rect>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0,0,0,0">
-   <property name="spacing">
-    <number>6</number>
-   </property>
-   <property name="leftMargin">
-    <number>12</number>
-   </property>
-   <property name="topMargin">
-    <number>10</number>
-   </property>
-   <property name="rightMargin">
-    <number>12</number>
-   </property>
-   <property name="bottomMargin">
-    <number>10</number>
-   </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+
+   <!-- Header: title and total installed memory -->
    <item>
     <layout class="QHBoxLayout" name="headerLayout">
      <item>
       <widget class="QLabel" name="titleLabel">
-       <property name="styleSheet">
-        <string>font-size: 18pt; font-weight: bold;</string>
-       </property>
-       <property name="text">
-        <string>Memory</string>
-       </property>
+       <property name="text"><string>Memory</string></property>
       </widget>
-     </item>
-     <item>
-      <spacer>
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>0</height>
-        </size>
-       </property>
-      </spacer>
      </item>
      <item>
       <widget class="QLabel" name="totalLabel">
-       <property name="styleSheet">
-        <string>font-size: 18pt;</string>
-       </property>
-       <property name="text">
-        <string>— GB</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-       </property>
+       <property name="text"><string>— GB</string></property>
+       <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
       </widget>
      </item>
     </layout>
    </item>
+
+   <!-- Body: graph column + statistics -->
    <item>
-    <widget class="Perf::GraphWidget" name="graphWidget" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>1</verstretch>
-      </sizepolicy>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="timeAxisLayout">
+    <layout class="QHBoxLayout" name="bodyLayout">
      <item>
-      <widget class="QLabel" name="timeLeftLabel">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>60 seconds</string>
-       </property>
-      </widget>
+      <layout class="QVBoxLayout" name="graphColumn">
+       <item>
+        <widget class="Perf::GraphCard" name="usageCard">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>1</verstretch></sizepolicy>
+         </property>
+         <layout class="QVBoxLayout" name="usageCardLayout">
+          <item>
+           <layout class="QHBoxLayout" name="usageHeaderLayout">
+            <item>
+             <widget class="QLabel" name="usageGraphLabel">
+              <property name="text"><string>In use</string></property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="usageGraphMaxLabel">
+              <property name="text"><string notr="true">100%</string></property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="Perf::GraphWidget" name="graphWidget" native="true">
+            <property name="minimumHeight"><number>120</number></property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>1</verstretch></sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="timeAxisLayout">
+            <item>
+             <widget class="QLabel" name="timeLeftLabel">
+              <property name="text"><string>60 seconds</string></property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="timeRightLabel">
+              <property name="text"><string>0</string></property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="Perf::GraphCard" name="compositionCard">
+         <layout class="QVBoxLayout" name="compositionCardLayout">
+          <item>
+           <layout class="QHBoxLayout" name="compLegendLayout">
+            <property name="spacing"><number>4</number></property>
+            <item>
+             <widget class="QLabel" name="compositionLabel">
+              <property name="text"><string>Memory composition</string></property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="Perf::MemoryBar" name="compositionBar" native="true">
+            <property name="minimumSize"><size><width>0</width><height>32</height></size></property>
+            <property name="maximumSize"><size><width>16777215</width><height>40</height></size></property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="compLegendRowLayout">
+            <property name="spacing"><number>4</number></property>
+            <item><widget class="QLabel" name="legendUsedDot"><property name="text"><string>■</string></property></widget></item>
+            <item><widget class="QLabel" name="legendUsedLabel"><property name="text"><string>In use</string></property></widget></item>
+            <item><widget class="QLabel" name="legendCompressedDot"><property name="text"><string>■</string></property></widget></item>
+            <item><widget class="QLabel" name="legendCompressedLabel"><property name="text"><string>Compressed</string></property></widget></item>
+            <item><widget class="QLabel" name="legendDirtyDot"><property name="text"><string>■</string></property></widget></item>
+            <item><widget class="QLabel" name="legendDirtyLabel"><property name="text"><string>Dirty</string></property></widget></item>
+            <item><widget class="QLabel" name="legendCachedDot"><property name="text"><string>■</string></property></widget></item>
+            <item><widget class="QLabel" name="legendCachedLabel"><property name="text"><string>Free (Cached)</string></property></widget></item>
+            <item><widget class="QLabel" name="legendFreeDot"><property name="text"><string>■</string></property></widget></item>
+            <item><widget class="QLabel" name="legendFreeLabel"><property name="text"><string>Free</string></property></widget></item>
+            <item>
+             <spacer name="compLegendSpacer">
+              <property name="orientation"><enum>Qt::Horizontal</enum></property>
+              <property name="sizeHint" stdset="0"><size><width>0</width><height>0</height></size></property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <spacer>
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>0</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLabel" name="timeRightLabel">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>0</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-       </property>
+      <!-- Labels are handed to the panel in display order by MemoryDetailWidget -->
+      <widget class="Perf::StatsPanel" name="statsPanel">
+       <widget class="QLabel" name="inUseLabel"><property name="text"><string>In use</string></property></widget>
+       <widget class="QLabel" name="statInUseValue"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="availableLabel"><property name="text"><string>Available</string></property></widget>
+       <widget class="QLabel" name="statAvailValue"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="cachedLabel"><property name="text"><string>Cached</string></property></widget>
+       <widget class="QLabel" name="statCachedValue"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="freeLabel"><property name="text"><string>Free</string></property></widget>
+       <widget class="QLabel" name="statFreeValue"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="dirtyLabel"><property name="text"><string>Dirty</string></property></widget>
+       <widget class="QLabel" name="statDirtyValue"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="buffersLabel"><property name="text"><string>Buffers</string></property></widget>
+       <widget class="QLabel" name="statBuffersValue"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="compressedLabel"><property name="text"><string>Compressed</string></property></widget>
+       <widget class="QLabel" name="statCompressedValue"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="dimmSlotsLabel"><property name="text"><string>DIMM slots used</string></property></widget>
+       <widget class="QLabel" name="statDimmSlotsValue"><property name="text"><string>—</string></property></widget>
+       <widget class="QLabel" name="memorySpeedLabel"><property name="text"><string>Speed</string></property></widget>
+       <widget class="QLabel" name="statMemSpeedValue"><property name="text"><string>—</string></property></widget>
       </widget>
      </item>
     </layout>
    </item>
-   <item>
-    <layout class="QHBoxLayout" name="compLegendLayout">
-     <item>
-      <widget class="QLabel" name="compositionLabel">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>Memory composition</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer>
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>10</width>
-         <height>0</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLabel" name="legendUsedDot">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>■</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="legendUsedLabel">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>In use</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="legendCompressedDot">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>■</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="legendCompressedLabel">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>Compressed</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="legendDirtyDot">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>■</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="legendDirtyLabel">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>Dirty</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="legendCachedDot">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>■</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="legendCachedLabel">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>Free (Cached)</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="legendFreeDot">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>■</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="legendFreeLabel">
-       <property name="styleSheet">
-        <string>font-size: 8pt;</string>
-       </property>
-       <property name="text">
-        <string>Free</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="Perf::MemoryBar" name="compositionBar" native="true">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>40</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>40</height>
-      </size>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QGridLayout" name="statsGrid">
-     <property name="horizontalSpacing">
-      <number>24</number>
-     </property>
-     <property name="verticalSpacing">
-      <number>8</number>
-     </property>
-     <item row="0" column="0">
-      <widget class="QLabel" name="inUseLabel">
-       <property name="styleSheet">
-        <string></string>
-       </property>
-       <property name="text">
-        <string>In use</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QLabel" name="statInUseValue">
-       <property name="text">
-        <string>—</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QLabel" name="availableLabel">
-       <property name="styleSheet">
-        <string></string>
-       </property>
-       <property name="text">
-        <string>Available</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="3">
-      <widget class="QLabel" name="statAvailValue">
-       <property name="text">
-        <string>—</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="dirtyLabel">
-       <property name="styleSheet">
-        <string></string>
-       </property>
-       <property name="text">
-        <string>Dirty</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QLabel" name="statDirtyValue">
-       <property name="text">
-        <string>—</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="2">
-      <widget class="QLabel" name="freeLabel">
-       <property name="styleSheet">
-        <string></string>
-       </property>
-       <property name="text">
-        <string>Free</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="3">
-      <widget class="QLabel" name="statFreeValue">
-       <property name="text">
-        <string>—</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="cachedLabel">
-       <property name="styleSheet">
-        <string></string>
-       </property>
-       <property name="text">
-        <string>Cached</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QLabel" name="statCachedValue">
-       <property name="text">
-        <string>—</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="2">
-      <widget class="QLabel" name="buffersLabel">
-       <property name="styleSheet">
-        <string></string>
-       </property>
-       <property name="text">
-        <string>Buffers</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="3">
-      <widget class="QLabel" name="statBuffersValue">
-       <property name="text">
-        <string>—</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="compressedLabel">
-       <property name="styleSheet">
-        <string></string>
-       </property>
-       <property name="text">
-        <string>Compressed</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QLabel" name="statCompressedValue">
-       <property name="text">
-        <string>—</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="dimmSlotsLabel">
-       <property name="styleSheet">
-        <string></string>
-       </property>
-       <property name="text">
-        <string>DIMM slots used</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QLabel" name="statDimmSlotsValue">
-       <property name="text">
-        <string>—</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="2">
-      <widget class="QLabel" name="memorySpeedLabel">
-       <property name="styleSheet">
-        <string></string>
-       </property>
-       <property name="text">
-        <string>Speed</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="3">
-      <widget class="QLabel" name="statMemSpeedValue">
-       <property name="text">
-        <string>—</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
+
   </layout>
  </widget>
  <customwidgets>
@@ -434,6 +157,18 @@
    <class>Perf::MemoryBar</class>
    <extends>QWidget</extends>
    <header>perf/memorybar.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Perf::GraphCard</class>
+   <extends>QFrame</extends>
+   <header>perf/graphcard.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>Perf::StatsPanel</class>
+   <extends>QFrame</extends>
+   <header>perf/statspanel.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

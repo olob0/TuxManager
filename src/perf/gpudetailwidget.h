@@ -19,11 +19,13 @@
 #ifndef PERF_GPUDETAILWIDGET_H
 #define PERF_GPUDETAILWIDGET_H
 
+#include "detailpage.h"
 #include "globals.h"
 #include "graphwidget.h"
 #include "historybuffer.h"
 
 #include <QComboBox>
+#include <QGridLayout>
 #include <QLabel>
 #include <QVector>
 #include <QWidget>
@@ -34,7 +36,7 @@ QT_END_NAMESPACE
 
 namespace Perf
 {
-    class GpuDetailWidget : public QWidget
+    class GpuDetailWidget : public DetailPage
     {
         Q_OBJECT
 
@@ -49,7 +51,12 @@ namespace Perf
             void onUpdated();
             void onEngineSelectionChanged(int slot, int comboIndex);
 
+        protected:
+            void layoutWidthChanged(int graphColumnWidth) override;
+
         private:
+            void applyStyle();
+            void relayoutEngineCards(int graphColumnWidth);
             void rebuildEngineSelectors();
             void bindGpuIdentity();
             void bindEngineGraphSource(int slot);
@@ -58,6 +65,9 @@ namespace Perf
             Ui::GpuDetailWidget *ui { nullptr };
             int m_gpuIndex { -1 };
 
+            QGridLayout           *m_engineGrid { nullptr };
+            int                    m_engineColumns { 0 };
+            QVector<QWidget *>     m_engineCards;
             QVector<QComboBox *>   m_engineSelectors;
             QVector<QLabel *>      m_engineValueLabels;
             QVector<GraphWidget *> m_engineGraphs;

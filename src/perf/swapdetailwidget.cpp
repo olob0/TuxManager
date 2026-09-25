@@ -21,7 +21,6 @@
 #include "../colorscheme.h"
 #include "../misc.h"
 #include "../ui/uihelper.h"
-#include "../ui/widgetstyle.h"
 #include "configuration.h"
 #include "globals.h"
 #include "metrics.h"
@@ -31,54 +30,23 @@
 
 using namespace Perf;
 
-SwapDetailWidget::SwapDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::SwapDetailWidget)
+SwapDetailWidget::SwapDetailWidget(QWidget *parent) : DetailPage(parent), ui(new Ui::SwapDetailWidget)
 {
     this->ui->setupUi(this);
 
     const ColorScheme *scheme = ColorScheme::GetCurrent();
-    WidgetStyle::ApplyTextStyle(this->ui->titleLabel, scheme->SwapUsageGraphLineColor, 18, true);
-    WidgetStyle::ApplyTextStyle(this->ui->totalLabel, scheme->MutedTextColor, 11);
 
-    WidgetStyle::ApplyTextStyle(this->ui->usageLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->usageValueLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->usageTimeLeftLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->usageTimeRightLabel, scheme->StatLabelColor, 8);
+    this->ui->statsPanel->AddStat(this->ui->inUseLabel, this->ui->inUseValueLabel);
+    this->ui->statsPanel->AddStat(this->ui->freeLabel, this->ui->freeValueLabel);
+    this->ui->statsPanel->AddStat(this->ui->swapInLabel, this->ui->inRateValueLabel);
+    this->ui->statsPanel->AddStat(this->ui->swapOutLabel, this->ui->outRateValueLabel);
 
-    WidgetStyle::ApplyTextStyle(this->ui->activityLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->activityMaxLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->activityTimeLeftLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->activityTimeRightLabel, scheme->StatLabelColor, 8);
+    this->ui->usageCard->SetHeader(this->ui->usageLabel, this->ui->usageValueLabel);
+    this->ui->usageCard->SetTimeAxis(this->ui->usageTimeLeftLabel, this->ui->usageTimeRightLabel);
+    this->ui->activityCard->SetHeader(this->ui->activityLabel, this->ui->activityMaxLabel);
+    this->ui->activityCard->SetTimeAxis(this->ui->activityTimeLeftLabel, this->ui->activityTimeRightLabel);
 
-
-    if (QGridLayout *statsGrid = this->findChild<QGridLayout *>("statsGrid"))
-    {
-        for (int row = 0; row < statsGrid->rowCount(); ++row)
-        {
-            for (int column = 0; column < statsGrid->columnCount(); column += 2)
-            {
-                if (QLayoutItem *item = statsGrid->itemAtPosition(row, column))
-                {
-                    if (QLabel *label = qobject_cast<QLabel *>(item->widget()))
-                        WidgetStyle::ApplyTextStyle(label, scheme->StatLabelColor);
-                }
-            }
-        }
-    }
-
-    this->m_statLabels = {
-        this->ui->usageLabel,
-        this->ui->activityLabel,
-        this->ui->inUseLabel,
-        this->ui->freeLabel,
-        this->ui->swapInLabel,
-        this->ui->swapOutLabel
-    };
-    this->m_axisLabels = {
-        this->ui->usageTimeLeftLabel,
-        this->ui->usageTimeRightLabel,
-        this->ui->activityTimeLeftLabel,
-        this->ui->activityTimeRightLabel
-    };
+    this->setupPage({ this->ui->titleLabel, this->ui->totalLabel, this->ui->headerLayout, this->ui->bodyLayout, this->ui->statsPanel });
 
     this->ui->activityGraphWidget->SetColor(scheme->SwapActivityGraphLineColor, scheme->SwapActivityGraphFillColor, scheme->SwapActivityGraphSecondaryFillColor);
     this->ui->activityGraphWidget->SetSampleCapacity(TUX_MANAGER_HISTORY_SIZE);
@@ -96,6 +64,8 @@ SwapDetailWidget::SwapDetailWidget(QWidget *parent) : QWidget(parent), ui(new Ui
     UIHelper::EnableCopyLabelContextMenu(this->ui->freeValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->inRateValueLabel);
     UIHelper::EnableCopyLabelContextMenu(this->ui->outRateValueLabel);
+
+    this->applyStyle();
 }
 
 SwapDetailWidget::~SwapDetailWidget()
@@ -126,42 +96,15 @@ void SwapDetailWidget::Init()
 void SwapDetailWidget::ApplyColorScheme()
 {
     const ColorScheme *scheme = ColorScheme::GetCurrent();
-    WidgetStyle::ApplyTextStyle(this->ui->titleLabel, scheme->SwapUsageGraphLineColor, 18, true);
-    WidgetStyle::ApplyTextStyle(this->ui->totalLabel, scheme->MutedTextColor, 11);
-
-    WidgetStyle::ApplyTextStyle(this->ui->usageLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->usageValueLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->usageTimeLeftLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->usageTimeRightLabel, scheme->StatLabelColor, 8);
-
-    WidgetStyle::ApplyTextStyle(this->ui->activityLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->activityMaxLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->activityTimeLeftLabel, scheme->StatLabelColor, 8);
-    WidgetStyle::ApplyTextStyle(this->ui->activityTimeRightLabel, scheme->StatLabelColor, 8);
-
-
-    if (QGridLayout *statsGrid = this->findChild<QGridLayout *>("statsGrid"))
-    {
-        for (int row = 0; row < statsGrid->rowCount(); ++row)
-        {
-            for (int column = 0; column < statsGrid->columnCount(); column += 2)
-            {
-                if (QLayoutItem *item = statsGrid->itemAtPosition(row, column))
-                {
-                    if (QLabel *label = qobject_cast<QLabel *>(item->widget()))
-                        WidgetStyle::ApplyTextStyle(label, scheme->StatLabelColor);
-                }
-            }
-        }
-    }
-    
-    for (QLabel *label : std::as_const(this->m_statLabels))
-        WidgetStyle::ApplyTextStyle(label, scheme->StatLabelColor);
-    for (QLabel *label : std::as_const(this->m_axisLabels))
-        WidgetStyle::ApplyTextStyle(label, scheme->AxisLabelColor);
+    this->applyStyle();
     this->ui->usageGraphArea->ApplyColorScheme();
     this->ui->activityGraphWidget->SetColor(scheme->SwapActivityGraphLineColor, scheme->SwapActivityGraphFillColor, scheme->SwapActivityGraphSecondaryFillColor);
-    this->update();
+}
+
+void SwapDetailWidget::applyStyle()
+{
+    const ColorScheme *scheme = ColorScheme::GetCurrent();
+    this->applyPageStyle(scheme->SwapUsageGraphLineColor);
 }
 
 void SwapDetailWidget::onUpdated()
@@ -176,7 +119,7 @@ void SwapDetailWidget::onUpdated()
                            ? static_cast<double>(usedKb) * 100.0 / static_cast<double>(totalKb)
                            : 0.0;
 
-    this->ui->totalLabel->setText(Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, totalKb)), 1));
+    this->ui->totalLabel->setText(tr("%1 total").arg(Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, totalKb)), 1)));
     this->ui->usageValueLabel->setText(QString::number(usedPct, 'f', 0) + "%");
 
     this->ui->inUseValueLabel->setText(Misc::FormatKiB(static_cast<quint64>(qMax<qint64>(0, usedKb)), 1));

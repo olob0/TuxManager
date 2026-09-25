@@ -19,6 +19,7 @@
 #include "swapgrapharea.h"
 
 #include "../colorscheme.h"
+#include "../ui/uimetrics.h"
 #include "configuration.h"
 #include "graphwidget.h"
 #include "metrics.h"
@@ -46,7 +47,7 @@ SwapGraphArea::SwapGraphArea(QWidget *parent) : QWidget(parent), m_stack(new QSt
 
     this->m_perDeviceContainer = new QWidget(this->m_stack);
     this->m_perDeviceGrid = new QGridLayout(this->m_perDeviceContainer);
-    this->m_perDeviceGrid->setSpacing(4);
+    this->m_perDeviceGrid->setSpacing(UiMetrics::Space::XS);
     this->m_perDeviceGrid->setContentsMargins(0, 0, 0, 0);
     this->m_perDeviceContainer->setLayout(this->m_perDeviceGrid);
     this->m_stack->addWidget(this->m_perDeviceContainer);

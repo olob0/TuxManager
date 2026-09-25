@@ -30,8 +30,9 @@
 namespace Perf
 {
     /// One entry in the left-hand side panel of the Performance tab.
-    /// Displays a title, a subtitle (e.g. "3% 3.40 GHz"), and an embedded
-    /// mini sparkline graph.  Emits clicked() when the user presses it.
+    /// Two text rows - the title with its headline value on the right, then a secondary detail
+    /// line - above an embedded mini sparkline graph. The resource color (the graph line color)
+    /// is reused for the value and the selection. Emits clicked() when the user presses it.
     class SidePanelItem : public QWidget
     {
         Q_OBJECT
@@ -40,7 +41,8 @@ namespace Perf
             explicit SidePanelItem(const QString &title, QWidget *parent = nullptr);
 
             void SetGraphSource(const HistoryBuffer &history, double maxVal = 100.0);
-            void Update(const QString &subtitle, double maxVal = 100.0);
+            //! value is the short headline on the title row (e.g. "12%"), detail the secondary line.
+            void Update(const QString &value, const QString &detail, double maxVal = 100.0);
 
             void SetSelected(bool selected);
             bool IsSelected() const { return this->m_selected; }
@@ -48,8 +50,8 @@ namespace Perf
             void SetGraphColor(QColor line, QColor fill);
             void SetGraphGridEnabled(bool enabled);
 
-            QSize sizeHint()        const override { return QSize(160, 80); }
-            QSize minimumSizeHint() const override { return QSize(120, 70); }
+            QSize sizeHint() const override;
+            QSize minimumSizeHint() const override;
 
         signals:
             void clicked();
@@ -64,10 +66,18 @@ namespace Perf
             void enterEvent(QEvent *event) override;
 #endif
             void leaveEvent(QEvent *event) override;
+            void changeEvent(QEvent *event) override;
 
         private:
+            //! Height of the two text rows plus the gap above the graph.
+            int textBlockHeight() const;
+            int graphHeight() const;
+            void updateMargins();
+
             QString      m_title;
-            QString      m_subtitle;
+            QString      m_value;
+            QString      m_detail;
+            QColor       m_accent;
             GraphWidget *m_graph;
             bool         m_selected { false };
             bool         m_hovered  { false };

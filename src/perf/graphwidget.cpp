@@ -17,6 +17,7 @@
  */
 
 #include "graphwidget.h"
+#include "../ui/uimetrics.h"
 #include "../colorscheme.h"
 #include "misc.h"
 
@@ -219,7 +220,8 @@ void GraphWidget::paintEvent(QPaintEvent * /*event*/)
     p.setBrush(this->m_fillColor);
     p.drawPath(fillPath);
 
-    // Kernel-time overlay (secondary data2) — drawn on top as a darker fill
+    // Kernel-time overlay (secondary data2) — drawn on top as a darker fill, or as its own line
+    QPainterPath overlayLine;
     if (this->m_overlayData && !this->m_overlayData->IsEmpty())
     {
         const int n2 = this->m_overlayData->Size();
@@ -237,19 +239,30 @@ void GraphWidget::paintEvent(QPaintEvent * /*event*/)
             else
                 kPath.lineTo(fx, fy);
         }
-        QPainterPath kFill = kPath;
-        kFill.lineTo(contentLeft + (slotOffset2 + visibleCount2 - 1) * stepX, contentBottom);
-        kFill.lineTo(contentLeft + slotOffset2 * stepX, contentBottom);
-        kFill.closeSubpath();
-        p.setPen(Qt::NoPen);
-        p.setBrush(this->m_fillColor2);
-        p.drawPath(kFill);
+        if (this->m_overlayLineColor.isValid())
+        {
+            overlayLine = kPath;
+        } else
+        {
+            QPainterPath kFill = kPath;
+            kFill.lineTo(contentLeft + (slotOffset2 + visibleCount2 - 1) * stepX, contentBottom);
+            kFill.lineTo(contentLeft + slotOffset2 * stepX, contentBottom);
+            kFill.closeSubpath();
+            p.setPen(Qt::NoPen);
+            p.setBrush(this->m_fillColor2);
+            p.drawPath(kFill);
+        }
     }
 
     // The line itself
     p.setPen(QPen(this->m_lineColor, 1.5));
     p.setBrush(Qt::NoBrush);
     p.drawPath(path);
+    if (!overlayLine.isEmpty())
+    {
+        p.setPen(QPen(this->m_overlayLineColor, 1.5));
+        p.drawPath(overlayLine);
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     // Border
@@ -260,11 +273,15 @@ void GraphWidget::paintEvent(QPaintEvent * /*event*/)
 
     if (!this->m_overlayText.isEmpty())
     {
-        QFont f = p.font();
-        f.setPointSizeF(qMax(7.0, f.pointSizeF() - 1.0));
-        p.setFont(f);
-        p.setPen(scheme->GraphOverlayTextColor);
-        p.drawText(r.adjusted(4, 2, -4, -2), Qt::AlignLeft | Qt::AlignTop, this->m_overlayText);
+        p.setFont(UiMetrics::Font(UiMetrics::TextRole::Caption, p.font()));
+        const QFontMetrics fm(p.font());
+        const QRect textRect = r.adjusted(UiMetrics::Space::XS, UiMetrics::Space::XXS, -UiMetrics::Space::XS, -UiMetrics::Space::XXS);
+        // In small graphs (e.g. many per-core cells) the label would hide most of the data.
+        if (textRect.height() >= 3 * fm.height() && fm.horizontalAdvance(this->m_overlayText) <= textRect.width())
+        {
+            p.setPen(scheme->GraphOverlayTextColor);
+            p.drawText(textRect, Qt::AlignLeft | Qt::AlignTop, this->m_overlayText);
+        }
     }
 
     if (this->m_hoverLineEnabled && this->m_hoverSlot >= 0 && this->m_hoverSlot < sampleCount)
