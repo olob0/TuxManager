@@ -110,6 +110,22 @@ void CpuDetailWidget::ApplyColorScheme()
 void CpuDetailWidget::applyStyle()
 {
     this->applyPageStyle(ColorScheme::GetCurrent()->CpuTitleColor);
+    this->updateGraphLegend();
+}
+
+void CpuDetailWidget::updateGraphLegend()
+{
+    // Kernel time is part of the total, so it stays a darker fill under the CPU line; the legend
+    // only appears while it is drawn.
+    const ColorScheme *scheme = ColorScheme::GetCurrent();
+    if (this->m_graphArea && this->m_graphArea->GetShowKernelTime())
+    {
+        this->ui->graphCard->SetLegend({ { tr("CPU"), scheme->CpuGraphLineColor },
+                                         { tr("Kernel"), scheme->CpuGraphSecondaryFillColor, true } });
+    } else
+    {
+        this->ui->graphCard->SetLegend({});
+    }
 }
 
 void CpuDetailWidget::setGraphMode(CpuGraphArea::GraphMode mode)
@@ -218,6 +234,7 @@ void CpuDetailWidget::onContextMenuRequested(const QPoint &globalPos)
     {
         this->m_graphArea->SetShowKernelTime(checked);
         CFG->CpuShowKernelTimes = checked;
+        this->updateGraphLegend();
     });
 
     menu.addSeparator();

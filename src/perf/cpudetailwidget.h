@@ -50,6 +50,7 @@ namespace Perf
 
         private:
             void applyStyle();
+            void updateGraphLegend();
             void setGraphMode(CpuGraphArea::GraphMode mode);
 
             Ui::CpuDetailWidget  *ui;

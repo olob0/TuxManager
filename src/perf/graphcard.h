@@ -22,7 +22,6 @@
 #include <QColor>
 #include <QFrame>
 #include <QList>
-#include <QPair>
 #include <QPointer>
 #include <QString>
 
@@ -30,6 +29,8 @@ class QLabel;
 
 namespace Perf
 {
+    class GraphWidget;
+
     /// Rounded card that hosts one graph (or graph-like widget) of a detail page together with
     /// its header row (title on the left, scale on the right) and its time axis.
     ///
@@ -41,12 +42,27 @@ namespace Perf
         Q_OBJECT
 
         public:
+            struct LegendEntry
+            {
+                QString Name;
+                QColor  Color;
+                //! Swatch for a filled area (e.g. kernel time) instead of a line.
+                bool    Filled { false };
+            };
+
             explicit GraphCard(QWidget *parent = nullptr);
 
             void SetHeader(QLabel *title, QLabel *scale = nullptr);
             void SetTimeAxis(QLabel *left, QLabel *right);
-            //! Shows "— name" swatches next to the title, one per series drawn in the graph.
-            void SetLegend(const QList<QPair<QString, QColor>> &entries);
+            //! Shows a swatch and name next to the title for each series drawn in the graph.
+            //! An empty list hides the legend.
+            void SetLegend(const QList<LegendEntry> &entries);
+            //! For graphs with two independent series (send / receive, read / write, ...): draws the
+            //! secondary series as its own line in a color derived from primaryColor, names both
+            //! series for the hover tooltip and shows them in the legend. Call again after the
+            //! color scheme changes.
+            void SetTwoLineSeries(GraphWidget *graph, const QString &primary, const QString &secondary,
+                                  const QColor &primaryColor);
             //! Re-applies padding, fonts and colors; call after the color scheme changes.
             void ApplyStyle();
 
@@ -58,7 +74,7 @@ namespace Perf
 
             QPointer<QLabel>        m_title;
             QPointer<QLabel>        m_legend;
-            QList<QPair<QString, QColor>> m_legendEntries;
+            QList<LegendEntry>      m_legendEntries;
             QList<QPointer<QLabel>> m_headerLabels;
             QList<QPointer<QLabel>> m_axisLabels;
     };

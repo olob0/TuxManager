@@ -53,7 +53,6 @@ NetworkDetailWidget::NetworkDetailWidget(QWidget *parent) : DetailPage(parent), 
     this->ui->throughputGraphWidget->SetSampleCapacity(TUX_MANAGER_HISTORY_SIZE);
     this->ui->throughputGraphWidget->SetGridColumns(6);
     this->ui->throughputGraphWidget->SetGridRows(4);
-    this->ui->throughputGraphWidget->SetSeriesNames(tr("Receive"), tr("Send"));
     this->ui->throughputGraphWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this->ui->throughputGraphWidget, &QWidget::customContextMenuRequested, this, &NetworkDetailWidget::onGraphContextMenuRequested);
     this->applyTransferUnitMode();
@@ -82,7 +81,10 @@ void NetworkDetailWidget::ApplyColorScheme()
 
 void NetworkDetailWidget::applyStyle()
 {
-    this->applyPageStyle(ColorScheme::GetCurrent()->NetworkTitleColor);
+    const ColorScheme *scheme = ColorScheme::GetCurrent();
+    this->applyPageStyle(scheme->NetworkTitleColor);
+    this->ui->throughputCard->SetTwoLineSeries(this->ui->throughputGraphWidget, tr("Receive"), tr("Send"),
+                                               scheme->NetworkGraphLineColor);
 }
 
 void NetworkDetailWidget::applyTransferUnitMode()

@@ -147,7 +147,6 @@ GpuDetailWidget::GpuDetailWidget(QWidget *parent) : DetailPage(parent), ui(new U
     UIHelper::EnableGraphContextMenu(this->ui->sharedMemGraphWidget);
 
     configureGraph(this->ui->copyBwGraphWidget);
-    this->ui->copyBwGraphWidget->SetSeriesNames(tr("TX"), tr("RX"));
     this->ui->copyBwGraphWidget->SetValueFormat(GraphWidget::ValueFormat::BytesPerSec);
     UIHelper::EnableGraphContextMenu(this->ui->copyBwGraphWidget);
 
@@ -210,13 +209,7 @@ void GpuDetailWidget::applyStyle()
     this->applyPageStyle(scheme->GpuTitleColor);
     for (QLabel *value : std::as_const(this->m_engineValueLabels))
         WidgetStyle::ApplyTextStyle(value, QColor(), UiMetrics::TextRole::Heading);
-
-    // TX keeps the GPU color, RX is drawn as its own line, pulled towards the text color so it
-    // stays distinct in both light and dark themes.
-    const QColor txColor = scheme->GpuGraphLineColor;
-    const QColor rxColor = UiMetrics::Mix(txColor, this->palette().color(QPalette::WindowText), 0.45);
-    this->ui->copyBwGraphWidget->SetOverlayLineColor(rxColor);
-    this->ui->copyCard->SetLegend({ { tr("TX"), txColor }, { tr("RX"), rxColor } });
+    this->ui->copyCard->SetTwoLineSeries(this->ui->copyBwGraphWidget, tr("TX"), tr("RX"), scheme->GpuGraphLineColor);
 }
 
 void GpuDetailWidget::layoutWidthChanged(int graphColumnWidth)

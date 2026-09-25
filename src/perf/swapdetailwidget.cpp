@@ -52,7 +52,6 @@ SwapDetailWidget::SwapDetailWidget(QWidget *parent) : DetailPage(parent), ui(new
     this->ui->activityGraphWidget->SetSampleCapacity(TUX_MANAGER_HISTORY_SIZE);
     this->ui->activityGraphWidget->SetGridColumns(6);
     this->ui->activityGraphWidget->SetGridRows(4);
-    this->ui->activityGraphWidget->SetSeriesNames(tr("Swap in"), tr("Swap out"));
     this->ui->activityGraphWidget->SetValueFormat(GraphWidget::ValueFormat::BytesPerSec);
     this->ui->activityGraphWidget->setToolTip(
                 tr("Swap in: disk -> RAM (pages read back into memory)\n"
@@ -105,6 +104,8 @@ void SwapDetailWidget::applyStyle()
 {
     const ColorScheme *scheme = ColorScheme::GetCurrent();
     this->applyPageStyle(scheme->SwapUsageGraphLineColor);
+    this->ui->activityCard->SetTwoLineSeries(this->ui->activityGraphWidget, tr("Swap in"), tr("Swap out"),
+                                             scheme->SwapActivityGraphLineColor);
 }
 
 void SwapDetailWidget::onUpdated()

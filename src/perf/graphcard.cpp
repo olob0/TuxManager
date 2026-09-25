@@ -17,6 +17,7 @@
  */
 
 #include "graphcard.h"
+#include "graphwidget.h"
 #include "../colorscheme.h"
 #include "../ui/uimetrics.h"
 #include "../ui/widgetstyle.h"
@@ -84,7 +85,7 @@ void GraphCard::SetTimeAxis(QLabel *left, QLabel *right)
     this->ApplyStyle();
 }
 
-void GraphCard::SetLegend(const QList<QPair<QString, QColor>> &entries)
+void GraphCard::SetLegend(const QList<LegendEntry> &entries)
 {
     this->m_legendEntries = entries;
     if (!this->m_legend && this->m_title)
@@ -104,17 +105,30 @@ void GraphCard::SetLegend(const QList<QPair<QString, QColor>> &entries)
     this->updateLegend();
 }
 
+void GraphCard::SetTwoLineSeries(GraphWidget *graph, const QString &primary, const QString &secondary,
+                                 const QColor &primaryColor)
+{
+    // The secondary line is pulled towards the text color so it stays distinct from the primary
+    // one in both light and dark themes.
+    const QColor secondaryColor = UiMetrics::Mix(primaryColor, this->palette().color(QPalette::WindowText), 0.45);
+    graph->SetSeriesNames(primary, secondary);
+    graph->SetOverlayLineColor(secondaryColor);
+    this->SetLegend({ { primary, primaryColor }, { secondary, secondaryColor } });
+}
+
 void GraphCard::updateLegend()
 {
     if (!this->m_legend)
         return;
 
     QStringList parts;
-    for (const QPair<QString, QColor> &entry : std::as_const(this->m_legendEntries))
+    for (const LegendEntry &entry : std::as_const(this->m_legendEntries))
     {
-        parts << QString("<span style=\"color:%1\">&#9473;&#9473;</span>&nbsp;%2")
-                     .arg(entry.second.name(), entry.first.toHtmlEscaped());
+        // U+2501 (heavy horizontal) draws a line swatch, U+25A0 (black square) a filled one.
+        parts << QString("<span style=\"color:%1\">%2</span>&nbsp;%3")
+                     .arg(entry.Color.name(), entry.Filled ? "&#9632;" : "&#9473;&#9473;", entry.Name.toHtmlEscaped());
     }
+    this->m_legend->setVisible(!parts.isEmpty());
     this->m_legend->setText(parts.join("&nbsp;&nbsp;&nbsp;"));
     WidgetStyle::ApplyTextStyle(this->m_legend, ColorScheme::GetCurrent()->StatLabelColor, UiMetrics::TextRole::Caption);
 }

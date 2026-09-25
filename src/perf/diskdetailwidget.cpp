@@ -63,7 +63,6 @@ DiskDetailWidget::DiskDetailWidget(QWidget *parent) : DetailPage(parent), ui(new
     this->ui->transferGraphWidget->SetSampleCapacity(TUX_MANAGER_HISTORY_SIZE);
     this->ui->transferGraphWidget->SetGridColumns(6);
     this->ui->transferGraphWidget->SetGridRows(4);
-    this->ui->transferGraphWidget->SetSeriesNames(tr("Read"), tr("Write"));
     this->ui->transferGraphWidget->SetValueFormat(GraphWidget::ValueFormat::BytesPerSec);
     UIHelper::EnableGraphContextMenu(this->ui->activeGraphWidget);
     UIHelper::EnableGraphContextMenu(this->ui->transferGraphWidget);
@@ -96,7 +95,10 @@ void DiskDetailWidget::ApplyColorScheme()
 
 void DiskDetailWidget::applyStyle()
 {
-    this->applyPageStyle(ColorScheme::GetCurrent()->DiskTitleColor);
+    const ColorScheme *scheme = ColorScheme::GetCurrent();
+    this->applyPageStyle(scheme->DiskTitleColor);
+    this->ui->transferCard->SetTwoLineSeries(this->ui->transferGraphWidget, tr("Read"), tr("Write"),
+                                             scheme->DiskTransferGraphLineColor);
 }
 
 void DiskDetailWidget::SetDisk(int index)
