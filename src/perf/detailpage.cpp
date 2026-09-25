@@ -139,10 +139,13 @@ void DetailPage::UpdateLayoutForWidth(int width)
         if (this->m_graphColumn && this->m_graphColumn->indexOf(stats) >= 0)
         {
             this->m_graphColumn->removeWidget(stats);
-            body->addWidget(stats, 0, Qt::AlignTop);
+            body->addWidget(stats);
         }
-        body->setAlignment(stats, Qt::AlignTop);
+        // Beside the graphs the card runs the full height of the graph column, so the column
+        // ends level with the graphs instead of stopping halfway; its content stays at the top.
+        body->setAlignment(stats, Qt::Alignment());
         stats->setFixedWidth(statsWidth);
+        stats->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
         graphColumnWidth -= statsWidth + UiMetrics::Space::L;
     } else
     {
@@ -154,8 +157,8 @@ void DetailPage::UpdateLayoutForWidth(int width)
         }
         stats->setMinimumWidth(0);
         stats->setMaximumWidth(QWIDGETSIZE_MAX);
+        stats->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
     }
-    stats->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
     stats->SetCompact(!wide, contentWidth >= UiMetrics::CompactStatsFourColumnsMinWidth ? 4 : 2);
 
     // The accessory moves under the subtitle once it would squeeze the title.
