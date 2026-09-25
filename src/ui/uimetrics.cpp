@@ -106,6 +106,15 @@ namespace UiMetrics
         return metrics.height() + Space::M;
     }
 
+    int PageMargin(int pageWidth)
+    {
+        if (pageWidth < WideLayoutMinWidth)
+            return Space::M;
+        if (pageWidth < 1200)
+            return Space::L;
+        return Space::XL;
+    }
+
     QColor Mix(const QColor &a, const QColor &b, qreal amount)
     {
         const qreal t = qBound(0.0, amount, 1.0);

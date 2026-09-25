@@ -129,7 +129,11 @@ void DetailPage::UpdateLayoutForWidth(int width)
         return;
     this->m_layoutWidth = width;
 
-    const int contentWidth = width - 2 * UiMetrics::Space::XL;
+    const int margin = UiMetrics::PageMargin(width);
+    if (QLayout *root = this->layout())
+        root->setContentsMargins(margin, UiMetrics::Space::L, margin, UiMetrics::Space::L);
+
+    const int contentWidth = width - 2 * margin;
     int graphColumnWidth = contentWidth;
     const bool wide = width >= UiMetrics::WideLayoutMinWidth;
     this->m_wide = wide;

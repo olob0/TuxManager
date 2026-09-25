@@ -59,6 +59,9 @@ namespace UiMetrics
     constexpr int StatsPanelMaxWidth = 360;
     //! Stacked (narrow) statistics use four columns from this panel width on, two below it.
     constexpr int CompactStatsFourColumnsMinWidth = 560;
+    //! Horizontal page margin for a page of the given width: tight on small windows, where every
+    //! pixel counts, and roomier as the page grows (Space::M up to Space::XL).
+    int PageMargin(int pageWidth);
     //! Narrowest a detail page gets; below it the Performance sidebar gives up room instead.
     constexpr int DetailPageMinWidth = 380;
     //! Smallest height of a secondary graph (e.g. GPU engines) before its page starts scrolling.
