@@ -109,6 +109,7 @@ void Configuration::Load()
     this->ShowOtherUsersProcs    = s.value("Processes/ShowOtherUsersProcs", this->ShowOtherUsersProcs).toBool();
     this->ShowProcessIcons       = s.value("Processes/ShowIcons",           this->ShowProcessIcons).toBool();
     this->ProcessTreeView        = s.value("Processes/TreeView",            this->ProcessTreeView).toBool();
+    this->ProcessTreeExpandByDefault = s.value("Processes/TreeExpandByDefault", this->ProcessTreeExpandByDefault).toBool();
     this->ProcessListSortColumn  = s.value("Processes/SortColumn",          this->ProcessListSortColumn).toInt();
     this->ProcessListSortOrder   = s.value("Processes/SortOrder",           this->ProcessListSortOrder).toInt();
     this->ProcessColumnSchemaVersion = s.value("Processes/ColumnSchemaVersion", this->ProcessColumnSchemaVersion).toInt();
@@ -118,6 +119,9 @@ void Configuration::Load()
     this->LastTaskDirectory      = s.value("Processes/LastTaskDirectory",   this->LastTaskDirectory).toString();
     while (this->TaskHistory.size() > TUX_MANAGER_TASK_HISTORY)
         this->TaskHistory.removeLast();
+
+    // Users
+    this->UsersExpandByDefault   = s.value("Users/ExpandByDefault",         this->UsersExpandByDefault).toBool();
 
     // Services
     this->ServicesHeaderState    = s.value("Services/HeaderState",          this->ServicesHeaderState).toByteArray();
@@ -201,6 +205,7 @@ void Configuration::Save()
     s.setValue("Processes/ShowOtherUsersProcs", this->ShowOtherUsersProcs);
     s.setValue("Processes/ShowIcons",           this->ShowProcessIcons);
     s.setValue("Processes/TreeView",            this->ProcessTreeView);
+    s.setValue("Processes/TreeExpandByDefault", this->ProcessTreeExpandByDefault);
     s.setValue("Processes/SortColumn",          this->ProcessListSortColumn);
     s.setValue("Processes/SortOrder",           this->ProcessListSortOrder);
     s.setValue("Processes/ColumnSchemaVersion", this->ProcessColumnSchemaVersion);
@@ -208,6 +213,9 @@ void Configuration::Save()
     s.setValue("Processes/TreeHeaderState",     this->ProcessTreeHeaderState);
     s.setValue("Processes/TaskHistory",         this->TaskHistory);
     s.setValue("Processes/LastTaskDirectory",   this->LastTaskDirectory);
+
+    // Users
+    s.setValue("Users/ExpandByDefault",         this->UsersExpandByDefault);
 
     // Services
     s.setValue("Services/HeaderState",          this->ServicesHeaderState);

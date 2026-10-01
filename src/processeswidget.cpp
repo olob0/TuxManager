@@ -324,8 +324,14 @@ void ProcessesWidget::setupTable()
     this->m_treeView->setColumnHidden(OS::ProcessTreeModel::ColIoWrites, true);
     this->m_treeView->setColumnHidden(OS::ProcessTreeModel::ColIoReadsPerSec, true);
     this->m_treeView->setColumnHidden(OS::ProcessTreeModel::ColIoWritesPerSec, true);
-    connect(this->m_treeView, &QTreeView::expanded, this, [this]() { this->m_treeView->resizeColumnToContents(OS::ProcessTreeModel::ColName); });
-    connect(this->m_treeView, &QTreeView::collapsed, this, [this]() { this->m_treeView->resizeColumnToContents(OS::ProcessTreeModel::ColName); });
+    auto resizeNameColumn = [this]()
+    {
+        // Bulk expansion resizes once at the end instead of once per row
+        if (!this->m_applyingTreeExpansion)
+            this->m_treeView->resizeColumnToContents(OS::ProcessTreeModel::ColName);
+    };
+    connect(this->m_treeView, &QTreeView::expanded, this, resizeNameColumn);
+    connect(this->m_treeView, &QTreeView::collapsed, this, resizeNameColumn);
     if (!resetProcessHeaderState && !CFG->ProcessTreeHeaderState.isEmpty())
     {
         treeHeader->restoreState(CFG->ProcessTreeHeaderState);
@@ -371,7 +377,10 @@ void ProcessesWidget::setTreeViewMode(bool enabled)
     {
         this->m_treeModel->SetProcesses(this->m_lastProcessSnapshot.isEmpty() ? this->m_model->GetProcesses() : this->m_lastProcessSnapshot);
         if (this->m_treeModel->rowCount() > 0)
+        {
+            this->applyTreeExpansion({});
             this->m_treeView->resizeColumnToContents(OS::ProcessTreeModel::ColName);
+        }
     }
 
     if (!this->m_treeView || !this->ui->tableView)
@@ -465,7 +474,7 @@ void ProcessesWidget::onRefreshFinished(int consumer, quint64 token, const QList
 
     UIHelper::TableSelectionSnapshot tableSnapshot;
     QList<pid_t> treeSelection;
-    QSet<pid_t> expandedPids;
+    QHash<pid_t, bool> treeExpansion;
     pid_t treeCurrentPid = 0;
     int treeScroll = 0;
 
@@ -475,7 +484,7 @@ void ProcessesWidget::onRefreshFinished(int consumer, quint64 token, const QList
     } else
     {
         treeSelection = this->selectedPids();
-        this->captureExpandedTreePids(QModelIndex(), expandedPids);
+        this->captureTreeExpansion(QModelIndex(), treeExpansion);
 
         if (QItemSelectionModel *sel = this->m_treeView->selectionModel())
         {
@@ -498,7 +507,7 @@ void ProcessesWidget::onRefreshFinished(int consumer, quint64 token, const QList
     if (this->m_treeViewMode)
     {
         this->m_treeModel->SetProcesses(this->m_lastProcessSnapshot);
-        this->restoreTreeStateDeferred(expandedPids, treeSelection, treeCurrentPid, treeScroll);
+        this->restoreTreeStateDeferred(treeExpansion, treeSelection, treeCurrentPid, treeScroll);
     } else
     {
         UIHelper::RestoreTableSelection(
@@ -790,6 +799,9 @@ void ProcessesWidget::onTreeContextMenu(const QPoint &pos)
     treeModeAct->setChecked(this->m_treeViewMode);
     connect(treeModeAct, &QAction::triggered, this, [this]() { this->setTreeViewMode(true); });
 
+    menu.addSeparator();
+    this->addTreeExpansionMenuItems(&menu);
+
     const QList<pid_t> pids = this->selectedPids();
     const bool hasSelection = !pids.isEmpty();
     menu.addSeparator();
@@ -989,25 +1001,27 @@ void ProcessesWidget::applyIconSetting()
     this->m_treeView->viewport()->update();
 }
 
-void ProcessesWidget::captureExpandedTreePids(const QModelIndex &parentProxy, QSet<pid_t> &expandedPids) const
+void ProcessesWidget::captureTreeExpansion(const QModelIndex &parentProxy, QHash<pid_t, bool> &expansion) const
 {
     const int rows = this->m_treeProxy->rowCount(parentProxy);
     for (int r = 0; r < rows; ++r)
     {
         const QModelIndex proxyIdx = this->m_treeProxy->index(r, OS::ProcessTreeModel::ColPid, parentProxy);
-        if (!proxyIdx.isValid() || !this->m_treeView->isExpanded(proxyIdx))
+        // Leaves are skipped so a process that later gains children still follows the default
+        if (!proxyIdx.isValid() || !this->m_treeProxy->hasChildren(proxyIdx))
             continue;
 
         const QModelIndex srcIdx = this->m_treeProxy->mapToSource(proxyIdx);
         if (srcIdx.isValid())
-            expandedPids.insert(static_cast<pid_t>(this->m_treeModel->data(srcIdx, Qt::UserRole).toLongLong()));
+            expansion.insert(static_cast<pid_t>(this->m_treeModel->data(srcIdx, Qt::UserRole).toLongLong()), this->m_treeView->isExpanded(proxyIdx));
 
-        this->captureExpandedTreePids(proxyIdx, expandedPids);
+        this->captureTreeExpansion(proxyIdx, expansion);
     }
 }
 
-void ProcessesWidget::restoreExpandedTreePids(const QModelIndex &sourceParent, const QSet<pid_t> &expandedPids)
+bool ProcessesWidget::restoreTreeExpansion(const QModelIndex &sourceParent, const QHash<pid_t, bool> &expansion)
 {
+    bool expanded_any = false;
     const int rows = this->m_treeModel->rowCount(sourceParent);
     for (int r = 0; r < rows; ++r)
     {
@@ -1017,22 +1031,66 @@ void ProcessesWidget::restoreExpandedTreePids(const QModelIndex &sourceParent, c
 
         const pid_t pid = static_cast<pid_t>(this->m_treeModel->data(srcIdx, Qt::UserRole).toLongLong());
         const QModelIndex proxyIdx = this->m_treeProxy->mapFromSource(srcIdx);
-        if (proxyIdx.isValid() && expandedPids.contains(pid))
+        if (proxyIdx.isValid() && expansion.value(pid, CFG->ProcessTreeExpandByDefault))
+        {
             this->m_treeView->expand(proxyIdx);
+            expanded_any = true;
+        }
 
-        this->restoreExpandedTreePids(srcIdx, expandedPids);
+        expanded_any |= this->restoreTreeExpansion(srcIdx, expansion);
     }
+    return expanded_any;
 }
 
-void ProcessesWidget::restoreTreeStateDeferred(const QSet<pid_t> &expandedPids,
+void ProcessesWidget::applyTreeExpansion(const QHash<pid_t, bool> &expansion)
+{
+    this->m_applyingTreeExpansion = true;
+    const bool expanded_any = this->restoreTreeExpansion(QModelIndex(), expansion);
+    this->m_applyingTreeExpansion = false;
+    if (expanded_any)
+        this->m_treeView->resizeColumnToContents(OS::ProcessTreeModel::ColName);
+}
+
+void ProcessesWidget::setTreeExpandByDefault(bool checked)
+{
+    CFG->ProcessTreeExpandByDefault = checked;
+    // Apply right away so the choice is visible, not only on rows that appear later
+    this->setTreeExpanded(checked);
+}
+
+void ProcessesWidget::setTreeExpanded(bool expanded)
+{
+    // expandAll()/collapseAll() emit no per-row signals, so resize here
+    if (expanded)
+        this->m_treeView->expandAll();
+    else
+        this->m_treeView->collapseAll();
+    this->m_treeView->resizeColumnToContents(OS::ProcessTreeModel::ColName);
+}
+
+void ProcessesWidget::addTreeExpansionMenuItems(QMenu *menu)
+{
+    QAction *expandAllAct = menu->addAction(tr("Expand all"));
+    connect(expandAllAct, &QAction::triggered, this, [this]() { this->setTreeExpanded(true); });
+
+    QAction *collapseAllAct = menu->addAction(tr("Collapse all"));
+    connect(collapseAllAct, &QAction::triggered, this, [this]() { this->setTreeExpanded(false); });
+
+    QAction *expandDefaultAct = menu->addAction(tr("Expand by default"));
+    expandDefaultAct->setCheckable(true);
+    expandDefaultAct->setChecked(CFG->ProcessTreeExpandByDefault);
+    connect(expandDefaultAct, &QAction::toggled, this, &ProcessesWidget::setTreeExpandByDefault);
+}
+
+void ProcessesWidget::restoreTreeStateDeferred(const QHash<pid_t, bool> &expansion,
                                                const QList<pid_t> &treeSelection,
                                                pid_t treeCurrentPid,
                                                int treeScroll)
 {
     // Defer restoration until the proxy/view settle after model reset/sort.
-    QTimer::singleShot(0, this, [this, expandedPids, treeSelection, treeCurrentPid, treeScroll]()
+    QTimer::singleShot(0, this, [this, expansion, treeSelection, treeCurrentPid, treeScroll]()
     {
-        this->restoreExpandedTreePids(QModelIndex(), expandedPids);
+        this->applyTreeExpansion(expansion);
 
         if (QItemSelectionModel *sel = this->m_treeView->selectionModel())
         {

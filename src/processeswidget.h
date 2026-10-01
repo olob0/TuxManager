@@ -25,6 +25,8 @@
 #include "os/processfilterproxy.h"
 #include "os/processrefreshservice.h"
 
+#include <QHash>
+#include <QMenu>
 #include <QModelIndex>
 #include <QHeaderView>
 #include <QSet>
@@ -86,6 +88,7 @@ class ProcessesWidget : public QWidget
         bool                      m_refreshPending { false };
         bool                      m_tableHeaderPersistenceEnabled { false };
         bool                      m_treeHeaderPersistenceEnabled { false };
+        bool                      m_applyingTreeExpansion { false };
         quint64                   m_refreshToken { 0 };
         QList<OS::Process>        m_lastProcessSnapshot;
         QModelIndex               m_contextMenuTargetIndex;
@@ -116,9 +119,15 @@ class ProcessesWidget : public QWidget
         void setShowOtherUsersProcesses(bool checked);
         void setShowIcons(bool checked);
         void applyIconSetting();
-        void captureExpandedTreePids(const QModelIndex &parentProxy, QSet<pid_t> &expandedPids) const;
-        void restoreExpandedTreePids(const QModelIndex &sourceParent, const QSet<pid_t> &expandedPids);
-        void restoreTreeStateDeferred(const QSet<pid_t> &expandedPids, const QList<pid_t> &treeSelection, pid_t treeCurrentPid, int treeScroll);
+        /// Record the expanded state of every tree row that has children, keyed by PID.
+        void captureTreeExpansion(const QModelIndex &parentProxy, QHash<pid_t, bool> &expansion) const;
+        /// Re-apply captured states; rows not in the map follow ProcessTreeExpandByDefault.
+        bool restoreTreeExpansion(const QModelIndex &sourceParent, const QHash<pid_t, bool> &expansion);
+        void applyTreeExpansion(const QHash<pid_t, bool> &expansion);
+        void setTreeExpandByDefault(bool checked);
+        void setTreeExpanded(bool expanded);
+        void addTreeExpansionMenuItems(QMenu *menu);
+        void restoreTreeStateDeferred(const QHash<pid_t, bool> &expansion, const QList<pid_t> &treeSelection, pid_t treeCurrentPid, int treeScroll);
 
         /// Collect PIDs of all currently selected rows.
         QList<pid_t> selectedPids() const;

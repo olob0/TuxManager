@@ -69,6 +69,7 @@ class Configuration : public QObject
         bool ShowOtherUsersProcs { true };  ///< Show processes of other users
         bool ShowProcessIcons    { true };  ///< Show application icons in the process name column
         bool ProcessTreeView     { false }; ///< Processes tab: false=table, true=tree
+        bool ProcessTreeExpandByDefault { true }; ///< Tree view: new parent rows start expanded
         int  ProcessListSortColumn { 4 };   ///< ColCpu — column index to sort by
         int  ProcessListSortOrder  { 1 };   ///< Qt::DescendingOrder
         int  ProcessColumnSchemaVersion { 0 }; ///< Version for persisted process header states.
@@ -76,6 +77,9 @@ class Configuration : public QObject
         QByteArray ProcessTreeHeaderState;  ///< Saved via QHeaderView::saveState()
         QStringList TaskHistory;            ///< Most recently executed task commands.
         QString LastTaskDirectory;          ///< Last directory used in Run new task browse dialog.
+
+        // ── Users tab ─────────────────────────────────────────────────────────────
+        bool UsersExpandByDefault { true }; ///< New user rows start expanded
 
         // ── Services tab ──────────────────────────────────────────────────────────
         QByteArray ServicesHeaderState;     ///< Saved via QHeaderView::saveState()

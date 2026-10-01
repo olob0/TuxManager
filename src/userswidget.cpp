@@ -216,6 +216,26 @@ void UsersWidget::onContextMenu(const QPoint &pos)
         menu.addSeparator();
     }
 
+    QAction *expandAllAct = menu.addAction(tr("Expand all"));
+    connect(expandAllAct, &QAction::triggered, this->ui->treeWidget, &QTreeWidget::expandAll);
+
+    QAction *collapseAllAct = menu.addAction(tr("Collapse all"));
+    connect(collapseAllAct, &QAction::triggered, this->ui->treeWidget, &QTreeWidget::collapseAll);
+
+    QAction *expandDefaultAct = menu.addAction(tr("Expand by default"));
+    expandDefaultAct->setCheckable(true);
+    expandDefaultAct->setChecked(CFG->UsersExpandByDefault);
+    connect(expandDefaultAct, &QAction::toggled, this, [this](bool checked)
+    {
+        CFG->UsersExpandByDefault = checked;
+        // Apply right away so the choice is visible, not only on users that log in later
+        if (checked)
+            this->ui->treeWidget->expandAll();
+        else
+            this->ui->treeWidget->collapseAll();
+    });
+    menu.addSeparator();
+
     UIHelper::AddRefreshIntervalContextMenu(&menu, this->m_refreshTimer, this->m_active);
     UIHelper::AddGlobalContextMenuItems(&menu, this);
 
@@ -305,13 +325,17 @@ void UsersWidget::rebuildTree(const QList<OS::Process> &allProcs)
         if (this->ui->treeWidget->indexOfTopLevelItem(userItem) < 0)
         {
             this->ui->treeWidget->insertTopLevelItem(userIndex, userItem);
+            userItem->setExpanded(CFG->UsersExpandByDefault);
         } else
         {
             const int currentIndex = this->ui->treeWidget->indexOfTopLevelItem(userItem);
             if (currentIndex != userIndex)
             {
+                // Taking the item out drops its expanded state, carry it over
+                const bool expanded = userItem->isExpanded();
                 this->ui->treeWidget->takeTopLevelItem(currentIndex);
                 this->ui->treeWidget->insertTopLevelItem(userIndex, userItem);
+                userItem->setExpanded(expanded);
             }
         }
 
