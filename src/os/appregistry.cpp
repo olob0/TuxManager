@@ -27,6 +27,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
+#include <QHash>
+#include <QIconEngine>
+#include <QPainter>
 #include <QRegularExpression>
 #include <QSet>
 #include <QStandardPaths>
@@ -44,6 +47,80 @@ namespace
     const QString GENERIC_ICON_NAME = QStringLiteral("application-x-executable");
     constexpr int RESCAN_DELAY_MS = 2000;
     constexpr int MAX_ANCESTOR_DEPTH = 64;
+
+    //! Draws an icon so it fills the requested size. QIcon never scales a bitmap up, so an app
+    //! that ships only 16px and 32px PNGs would stay at 16px in a 20px slot; such icons are
+    //! rendered from a larger source and scaled down instead.
+    class FillIconEngine : public QIconEngine
+    {
+        public:
+            explicit FillIconEngine(const QIcon &base) : m_base(base) {}
+
+            QIconEngine *clone() const override
+            {
+                return new FillIconEngine(this->m_base);
+            }
+
+            QSize actualSize(const QSize &size, QIcon::Mode, QIcon::State) override
+            {
+                return size;
+            }
+
+            QList<QSize> availableSizes(QIcon::Mode mode, QIcon::State state) override
+            {
+                return this->m_base.availableSizes(mode, state);
+            }
+
+            bool isNull() override
+            {
+                return this->m_base.isNull();
+            }
+
+            QPixmap pixmap(const QSize &size, QIcon::Mode mode, QIcon::State state) override
+            {
+                if (size.isEmpty())
+                    return {};
+
+                const quint64 key = (quint64(size.width()) << 32) | (quint64(size.height()) << 8)
+                                    | (quint64(mode) << 1) | quint64(state);
+                const auto it = this->m_cache.constFind(key);
+                if (it != this->m_cache.cend())
+                    return it.value();
+
+                // Prefer the theme's artwork for this size; only bitmaps that come back too
+                // small fall back to a larger source, since bigger sizes may use another design.
+                QPixmap source = this->m_base.pixmap(size, 1.0, mode, state);
+                if (source.width() < size.width() && source.height() < size.height())
+                    source = this->m_base.pixmap(size * 2, 1.0, mode, state);
+                QPixmap result(size);
+                result.fill(Qt::transparent);
+                if (!source.isNull())
+                {
+                    source = source.scaled(size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                    QPainter painter(&result);
+                    painter.drawPixmap((size.width() - source.width()) / 2, (size.height() - source.height()) / 2, source);
+                }
+                this->m_cache.insert(key, result);
+                return result;
+            }
+
+            QPixmap scaledPixmap(const QSize &size, QIcon::Mode mode, QIcon::State state, qreal scale) override
+            {
+                QPixmap result = this->pixmap((QSizeF(size) * scale).toSize(), mode, state);
+                result.setDevicePixelRatio(scale);
+                return result;
+            }
+
+            void paint(QPainter *painter, const QRect &rect, QIcon::Mode mode, QIcon::State state) override
+            {
+                const qreal dpr = painter->device() ? painter->device()->devicePixelRatioF() : 1.0;
+                painter->drawPixmap(rect, this->scaledPixmap(rect.size(), mode, state, dpr));
+            }
+
+        private:
+            QIcon                     m_base;
+            QHash<quint64, QPixmap>   m_cache;
+    };
 
     // Adapted from https://gitlab.com/mission-center-devs/app-detection
 
@@ -356,13 +433,15 @@ QIcon AppRegistry::IconFor(const QString &icon_name)
             icon = QIcon(pixmap);
     }
 
-    if (icon.isNull() && key != GENERIC_ICON_NAME)
-        icon = this->IconFor(QString());
-
     // Without a complete icon theme the generic name is missing as well; fall back to the
     // widget style so every row still gets an icon and names stay aligned.
     if (icon.isNull() && key == GENERIC_ICON_NAME && QApplication::style())
         icon = QApplication::style()->standardIcon(QStyle::SP_FileIcon);
+
+    if (!icon.isNull())
+        icon = QIcon(new FillIconEngine(icon));
+    else if (key != GENERIC_ICON_NAME)
+        icon = this->IconFor(QString());
 
     this->m_icons.insert(key, icon);
     return icon;

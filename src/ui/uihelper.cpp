@@ -92,7 +92,9 @@ namespace
                 if (type == CT_ItemViewItem && option)
                 {
                     result.rwidth() += 2 * UiMetrics::Space::M;
-                    result.setHeight(qMax(result.height(), UiMetrics::RowHeight(option->fontMetrics)));
+                    const auto *view = qobject_cast<const QAbstractItemView *>(widget);
+                    const int iconHeight = view ? view->iconSize().height() : 0;
+                    result.setHeight(qMax(result.height(), UiMetrics::RowHeight(option->fontMetrics, iconHeight)));
                 } else if (type == CT_HeaderSection)
                 {
                     result.rwidth() += 2 * kHeaderExtraPadding;
@@ -143,7 +145,7 @@ void UIHelper::ApplyItemViewStyle(QAbstractItemView *view)
     if (QTableView *table = qobject_cast<QTableView *>(view))
     {
         table->setShowGrid(false);
-        table->verticalHeader()->setDefaultSectionSize(UiMetrics::RowHeight(table->fontMetrics()));
+        table->verticalHeader()->setDefaultSectionSize(UiMetrics::RowHeight(table->fontMetrics(), table->iconSize().height()));
         table->verticalHeader()->setMinimumSectionSize(table->fontMetrics().height());
         header = table->horizontalHeader();
     } else if (QTreeView *tree = qobject_cast<QTreeView *>(view))

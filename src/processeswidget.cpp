@@ -48,6 +48,12 @@
 #include <signal.h>
 #include <unistd.h>
 
+namespace
+{
+    //! Edge of the app icons beside process names; rows grow to fit it.
+    constexpr int kProcessIconSize = 20;
+}
+
 ProcessesWidget::ProcessesWidget(OS::ProcessRefreshService *processRefreshService, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::ProcessesWidget)
@@ -183,10 +189,11 @@ void ProcessesWidget::setupTable()
 
     QTableView *tv = this->ui->tableView;
     this->m_treeView = new QTreeView(this);
+    // Icon size first: the shared item view style derives the row height from it.
+    tv->setIconSize(QSize(kProcessIconSize, kProcessIconSize));
+    this->m_treeView->setIconSize(QSize(kProcessIconSize, kProcessIconSize));
     UIHelper::ApplyItemViewStyle(tv);
     UIHelper::ApplyItemViewStyle(this->m_treeView);
-    tv->setIconSize(QSize(16, 16));
-    this->m_treeView->setIconSize(QSize(16, 16));
     this->applyIconSetting();
 
     if (QVBoxLayout *vl = qobject_cast<QVBoxLayout *>(this->layout()))

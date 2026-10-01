@@ -90,8 +90,8 @@ namespace UiMetrics
     //! Weight on the CSS scale (400 normal, 600 semibold, 700 bold).
     int CssWeight(TextRole role);
 
-    //! Height of a list/table row: one line of text plus vertical padding.
-    int RowHeight(const QFontMetrics &metrics);
+    //! Height of a list/table row: one line of text (or the icon, if taller) plus vertical padding.
+    int RowHeight(const QFontMetrics &metrics, int iconHeight = 0);
 
     //! Linear blend of two colors; amount 0 returns b, 1 returns a.
     QColor Mix(const QColor &a, const QColor &b, qreal amount);

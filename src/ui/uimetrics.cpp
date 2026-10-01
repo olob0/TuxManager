@@ -101,9 +101,9 @@ namespace UiMetrics
         return 400;
     }
 
-    int RowHeight(const QFontMetrics &metrics)
+    int RowHeight(const QFontMetrics &metrics, int iconHeight)
     {
-        return metrics.height() + Space::M;
+        return qMax(metrics.height(), iconHeight) + Space::M;
     }
 
     int PageMargin(int pageWidth)
