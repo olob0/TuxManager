@@ -33,6 +33,7 @@ SOURCES += \
     ui/widgetstyle.cpp \
     ui/uihelper.cpp \
     ui/segmentedcontrol.cpp \
+    ui/useravatar.cpp \
     configuration.cpp \
     logger.cpp \
     processeswidget.cpp \
@@ -94,6 +95,7 @@ HEADERS += \
     ui/widgetstyle.h \
     ui/uihelper.h \
     ui/segmentedcontrol.h \
+    ui/useravatar.h \
     configuration.h \
     historybuffer.h \
     logger.h \

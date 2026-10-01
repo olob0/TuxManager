@@ -22,7 +22,9 @@
 #include "configuration.h"
 #include "misc.h"
 #include "ui/uihelper.h"
+#include "ui/useravatar.h"
 
+#include <QEvent>
 #include <QHeaderView>
 #include <QMetaObject>
 #include <QMenu>
@@ -34,6 +36,9 @@
 
 namespace
 {
+    //! Edge of the avatars beside user names, same as the process icons so rows match the Processes tab.
+    constexpr int kAvatarSize = 20;
+
     struct UserAgg
     {
         QString name;
@@ -82,6 +87,8 @@ UsersWidget::UsersWidget(OS::ProcessRefreshService *processRefreshService, QWidg
     this->ui->setupUi(this);
 
     UIHelper::ApplyTabChrome(this, nullptr, nullptr, this->ui->statusLabel);
+    // Icon size first: the shared item view style derives the row height from it.
+    this->ui->treeWidget->setIconSize(QSize(kAvatarSize, kAvatarSize));
     UIHelper::ApplyItemViewStyle(this->ui->treeWidget);
     this->ui->treeWidget->setColumnCount(3);
     this->ui->treeWidget->setHeaderLabels({ tr("User / Process"), tr("CPU"), tr("Memory") });
@@ -122,6 +129,29 @@ UsersWidget::~UsersWidget()
     delete this->ui;
 }
 
+void UsersWidget::changeEvent(QEvent *event)
+{
+    // Initials are painted on palette colors, so redraw them for the new theme
+    if (event->type() == QEvent::PaletteChange)
+        this->m_avatars.clear();
+    QWidget::changeEvent(event);
+}
+
+QIcon UsersWidget::avatarFor(uid_t uid, const QString &userName)
+{
+    const qreal ratio = this->devicePixelRatioF();
+    if (!qFuzzyCompare(ratio, this->m_avatarPixelRatio))
+    {
+        this->m_avatars.clear();
+        this->m_avatarPixelRatio = ratio;
+    }
+
+    auto it = this->m_avatars.constFind(uid);
+    if (it == this->m_avatars.cend())
+        it = this->m_avatars.insert(uid, UserAvatar::For(uid, userName, kAvatarSize, ratio));
+    return it.value();
+}
+
 void UsersWidget::SetActive(bool active)
 {
     if (this->m_active == active)
@@ -130,6 +160,8 @@ void UsersWidget::SetActive(bool active)
     this->m_active = active;
     if (active)
     {
+        // Colors and pictures may have changed while the tab was hidden
+        this->m_avatars.clear();
         this->startRefresh();
         this->m_refreshTimer->start(CFG->RefreshRateMs);
     } else
@@ -321,6 +353,10 @@ void UsersWidget::rebuildTree(const QList<OS::Process> &allProcs)
             userItem = new QTreeWidgetItem();
 
         updateUserItem(userItem, uid, a);
+        const QIcon avatar = this->avatarFor(uid, a.name);
+        // QIcon has no equality, so setting it every tick would repaint the row each time
+        if (userItem->icon(0).cacheKey() != avatar.cacheKey())
+            userItem->setIcon(0, avatar);
 
         if (this->ui->treeWidget->indexOfTopLevelItem(userItem) < 0)
         {
@@ -414,6 +450,7 @@ void UsersWidget::rebuildTree(const QList<OS::Process> &allProcs)
 
     for (QTreeWidgetItem *staleUserItem : std::as_const(userItems))
     {
+        this->m_avatars.remove(userId(staleUserItem));
         const int index = this->ui->treeWidget->indexOfTopLevelItem(staleUserItem);
         if (index >= 0)
             delete this->ui->treeWidget->takeTopLevelItem(index);

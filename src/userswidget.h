@@ -23,6 +23,7 @@
 #include "os/processrefreshservice.h"
 
 #include <QHash>
+#include <QIcon>
 #include <Qt>
 #include <QTimer>
 #include <QWidget>
@@ -44,6 +45,9 @@ class UsersWidget : public QWidget
         void SetActive(bool active);
         bool IsActive() const { return this->m_active; }
 
+    protected:
+        void changeEvent(QEvent *event) override;
+
     signals:
         void goToProcessRequested(pid_t pid);
 
@@ -62,9 +66,13 @@ class UsersWidget : public QWidget
         quint64          m_refreshToken { 0 };
         int              m_sortColumn { 1 };
         Qt::SortOrder    m_sortOrder { Qt::DescendingOrder };
+        //! Avatars by uid, drawn for m_avatarPixelRatio; redrawn when the tab is shown or the theme or screen changes.
+        QHash<uid_t, QIcon> m_avatars;
+        qreal            m_avatarPixelRatio { 0.0 };
 
         void startRefresh();
         void rebuildTree(const QList<OS::Process> &allProcs);
+        QIcon avatarFor(uid_t uid, const QString &userName);
 };
 
 #endif // USERSWIDGET_H
